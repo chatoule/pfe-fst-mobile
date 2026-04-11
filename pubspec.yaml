@@ -1,0 +1,43 @@
+name: pointage
+description: "Application de gestion des presences & pointage- FST UIN"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.5.1
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # Internationalisation
+  flutter_localizations:
+    sdk: flutter
+
+  # Navigation et gestion d'état
+  get: ^4.6.6
+
+  # Requêtes HTTP vers le backend Spring
+  http: ^1.2.0
+
+  shared_preferences: ^2.2.2
+  signature: ^5.4.0
+
+  pdf: ^3.10.8
+  printing: ^5.12.0
+
+  # Intl compatible avec flutter_localizations
+  intl: ^0.20.2
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  generate: true
+  assets:
+    - assets/images/logo_uin.png
