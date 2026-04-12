@@ -9,14 +9,9 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen>
     with TickerProviderStateMixin {
   late AnimationController _logoController;
-  late AnimationController _textController;
-  late AnimationController _progressController;
-
+  late AnimationController _dotsController;
   late Animation<double> _logoScale;
   late Animation<double> _logoFade;
-  late Animation<double> _textFade;
-  late Animation<Offset> _textSlide;
-  late Animation<double> _progressAnim;
 
   @override
   void initState() {
@@ -24,20 +19,15 @@ class _SplashScreenState extends State<SplashScreen>
 
     _logoController = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 1000),
+      duration: Duration(milliseconds: 1200),
     );
 
-    _textController = AnimationController(
+    _dotsController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 800),
-    );
+    )..repeat();
 
-    _progressController = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 2500),
-    );
-
-    _logoScale = Tween<double>(begin: 0.3, end: 1.0).animate(
+    _logoScale = Tween<double>(begin: 0.5, end: 1.0).animate(
       CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
     );
 
@@ -45,28 +35,8 @@ class _SplashScreenState extends State<SplashScreen>
       CurvedAnimation(parent: _logoController, curve: Curves.easeIn),
     );
 
-    _textFade = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeIn),
-    );
+    _logoController.forward();
 
-    _textSlide = Tween<Offset>(
-      begin: Offset(0, 0.5),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeOut),
-    );
-
-    _progressAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _progressController, curve: Curves.easeInOut),
-    );
-
-    // Séquence d'animations
-    _logoController.forward().then((_) {
-      _textController.forward();
-      _progressController.forward();
-    });
-
-    // Redirection après 3.5 secondes
     Future.delayed(Duration(milliseconds: 3500), () {
       Get.offAllNamed('/login');
     });
@@ -75,25 +45,22 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void dispose() {
     _logoController.dispose();
-    _textController.dispose();
-    _progressController.dispose();
+    _dotsController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
       body: Container(
         width: double.infinity,
         height: double.infinity,
         decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
+          gradient: RadialGradient(
+            center: Alignment(-0.5, -0.3),
+            radius: 1.5,
             colors: [
-              Color(0xFF00A86B),
+              Color(0xFF00C97A),
               Color(0xFF00855A),
               Color(0xFF005C3E),
               Color(0xFF003D29),
@@ -102,237 +69,168 @@ class _SplashScreenState extends State<SplashScreen>
         ),
         child: Stack(
           children: [
-            // ===== DECORATIONS GEOMETRIQUES =====
+            // Cercles décoratifs
             Positioned(
-              top: -60,
-              right: -60,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
-                ),
-              ),
+              top: -100,
+              right: -100,
+              child: _buildCircle(300, 0.05),
             ),
             Positioned(
-              top: 60,
-              right: -30,
-              child: Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
-                ),
-              ),
+              bottom: -150,
+              left: -100,
+              child: _buildCircle(400, 0.05),
             ),
             Positioned(
-              bottom: -80,
-              left: -80,
-              child: Container(
-                width: 280,
-                height: 280,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.05),
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 100,
-              right: -40,
-              child: Container(
-                width: 150,
-                height: 150,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withOpacity(0.04),
-                ),
-              ),
+              top: 100,
+              left: -50,
+              child: _buildCircle(200, 0.04),
             ),
 
-            // ===== CONTENU PRINCIPAL =====
             SafeArea(
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 40),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Spacer(flex: 2),
+              child: Column(
+                children: [
+                  Spacer(flex: 2),
 
-                      // Logo animé
-                      ScaleTransition(
-                        scale: _logoScale,
-                        child: FadeTransition(
-                          opacity: _logoFade,
-                          child: Container(
-                            width: 130,
-                            height: 130,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white,
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withOpacity(0.3),
-                                  blurRadius: 30,
-                                  offset: Offset(0, 15),
-                                ),
-                                BoxShadow(
-                                  color: Color(0xFF00A86B).withOpacity(0.3),
-                                  blurRadius: 40,
-                                  offset: Offset(0, 0),
-                                ),
-                              ],
-                            ),
-                            child: ClipOval(
-                              child: Padding(
-                                padding: EdgeInsets.all(12),
-                                child: Image.asset(
-                                  'assets/images/logo_uin.png',
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                      SizedBox(height: 40),
-
-                      // Textes animés
-                      SlideTransition(
-                        position: _textSlide,
-                        child: FadeTransition(
-                          opacity: _textFade,
-                          child: Column(
+                  // Logo animé
+                  ScaleTransition(
+                    scale: _logoScale,
+                    child: FadeTransition(
+                      opacity: _logoFade,
+                      child: Column(
+                        children: [
+                          // Cercles concentriques autour du logo
+                          Stack(
+                            alignment: Alignment.center,
                             children: [
-                              Text(
-                                'FST - UIN',
-                                style: TextStyle(
+                              _buildCircle(220, 0.08),
+                              _buildCircle(170, 0.12),
+                              _buildCircle(130, 0.18),
+                              // Logo
+                              Container(
+                                width: 110,
+                                height: 110,
+                                decoration: BoxDecoration(
                                   color: Colors.white,
-                                  fontSize: 36,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 5,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 20,
+                                      offset: Offset(0, 10),
+                                    ),
+                                  ],
                                 ),
-                                textAlign: TextAlign.center,
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Faculte des Sciences et Techniques',
-                                style: TextStyle(
-                                  color: Colors.white.withOpacity(0.85),
-                                  fontSize: 14,
-                                  letterSpacing: 0.5,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              SizedBox(height: 4),
-                              Text(
-                                'Universite Islamique au Niger',
-                                style: TextStyle(
-                                  color: Colors.white60,
-                                  fontSize: 12,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                              SizedBox(height: 20),
-
-                              // Ligne décorative
-                              Container(
-                                width: 60,
-                                height: 2,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.5),
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-
-                              SizedBox(height: 20),
-
-                              // Sous-titre
-                              Container(
-                                padding: EdgeInsets.symmetric(
-                                    horizontal: 20, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.2),
+                                child: ClipOval(
+                                  child: Padding(
+                                    padding: EdgeInsets.all(10),
+                                    child: Image.asset(
+                                      'assets/images/logo_uin.png',
+                                      fit: BoxFit.contain,
+                                    ),
                                   ),
-                                ),
-                                child: Text(
-                                  'Digitalisation des fiches de presence',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    letterSpacing: 0.5,
-                                  ),
-                                  textAlign: TextAlign.center,
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ),
 
-                      Spacer(flex: 2),
+                          SizedBox(height: 32),
 
-                      // Barre de progression
-                      FadeTransition(
-                        opacity: _textFade,
-                        child: Column(
-                          children: [
-                            // Barre de chargement
-                            AnimatedBuilder(
-                              animation: _progressAnim,
-                              builder: (context, child) {
-                                return Column(
-                                  children: [
-                                    Container(
-                                      width: size.width * 0.6,
-                                      height: 4,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(2),
-                                      ),
-                                      child: FractionallySizedBox(
-                                        alignment: Alignment.centerLeft,
-                                        widthFactor: _progressAnim.value,
-                                        child: Container(
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius:
-                                            BorderRadius.circular(2),
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(height: 12),
-                                    Text(
-                                      'Chargement...',
-                                      style: TextStyle(
-                                        color: Colors.white60,
-                                        fontSize: 12,
-                                        letterSpacing: 1,
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              },
+                          Text('FST - UIN',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 32,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 4)),
+                          SizedBox(height: 6),
+                          Text('Faculte des Sciences et Techniques',
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.85),
+                                  fontSize: 14),
+                              textAlign: TextAlign.center),
+                          SizedBox(height: 4),
+                          Text('Universite Islamique au Niger',
+                              style: TextStyle(
+                                  color: Colors.white60, fontSize: 12),
+                              textAlign: TextAlign.center),
+                          SizedBox(height: 20),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                                horizontal: 20, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color: Colors.white.withOpacity(0.3)),
                             ),
-                            SizedBox(height: 32),
-                          ],
-                        ),
+                            child: Text(
+                              'Digitalisation des fiches de presence et des pointages',
+                              style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  letterSpacing: 0.5),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+
+                  Spacer(flex: 2),
+
+                  // Animation de chargement dots
+                  AnimatedBuilder(
+                    animation: _dotsController,
+                    builder: (context, child) {
+                      return Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(4, (index) {
+                          final delay = index * 0.25;
+                          final animValue = (_dotsController.value - delay)
+                              .clamp(0.0, 0.5);
+                          final scale = 1.0 + (animValue * 1.0);
+                          final opacity = 0.3 + (animValue * 1.4).clamp(0.0, 0.7);
+                          return Container(
+                            margin: EdgeInsets.symmetric(horizontal: 4),
+                            child: Transform.scale(
+                              scale: scale,
+                              child: Container(
+                                width: index == 3 ? 8 : 6,
+                                height: index == 3 ? 16 : 6,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(opacity),
+                                  borderRadius: BorderRadius.circular(10),
+                                ),
+                              ),
+                            ),
+                          );
+                        }),
+                      );
+                    },
+                  ),
+
+                  SizedBox(height: 32),
+
+                  Text('© 2026 FST - Universite Islamique au Niger',
+                      style: TextStyle(color: Colors.white60, fontSize: 11)),
+
+                  SizedBox(height: 24),
+                ],
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildCircle(double size, double opacity) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withOpacity(opacity),
       ),
     );
   }
