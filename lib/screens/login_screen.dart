@@ -14,7 +14,9 @@ class _LoginScreenState extends State<LoginScreen>
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final LocalAuthentication _localAuth = LocalAuthentication();
+
   bool _obscurePassword = true;
+
   late AnimationController _animController;
   late Animation<double> _fadeAnim;
   late Animation<Offset> _slideAnim;
@@ -22,19 +24,23 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   void initState() {
     super.initState();
+
     _animController = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: 1000),
     );
+
     _fadeAnim = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeIn),
     );
+
     _slideAnim = Tween<Offset>(
       begin: Offset(0, 0.3),
       end: Offset.zero,
     ).animate(
       CurvedAnimation(parent: _animController, curve: Curves.easeOut),
     );
+
     _animController.forward();
   }
 
@@ -46,31 +52,39 @@ class _LoginScreenState extends State<LoginScreen>
     super.dispose();
   }
 
+  // ✅ AUTH BIOMÉTRIQUE CORRIGÉ
   Future<void> _authenticateWithBiometrics() async {
     try {
-      final bool canAuth = await _localAuth.canCheckBiometrics;
-      if (!canAuth) {
-        Get.snackbar('Info', 'Empreinte non disponible sur cet appareil',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.orange,
-            colorText: Colors.white);
+      final List<BiometricType> availableBiometrics =
+      await _localAuth.getAvailableBiometrics();
+
+      if (availableBiometrics.isEmpty) {
+        Get.snackbar(
+          'Info',
+          'Aucune biométrie disponible',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+        );
         return;
       }
+
       final bool authenticated = await _localAuth.authenticate(
-        localizedReason: 'Scannez votre empreinte pour vous connecter',
-        options: const AuthenticationOptions(
-          biometricOnly: true,
-          stickyAuth: true,
-        ),
+        localizedReason: 'Authentifiez-vous pour vous connecter',
+        biometricOnly: true,
       );
+
       if (authenticated) {
         _authController.login('enseignant@fst.ne', '1234');
       }
     } catch (e) {
-      Get.snackbar('Erreur', 'Authentification par empreinte echouee',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white);
+      Get.snackbar(
+        'Erreur',
+        'Authentification biométrique échouée',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
   }
 
@@ -105,7 +119,6 @@ class _LoginScreenState extends State<LoginScreen>
                   children: [
                     SizedBox(height: 30),
 
-                    // Logo avec cercles
                     FadeTransition(
                       opacity: _fadeAnim,
                       child: Stack(
@@ -148,23 +161,27 @@ class _LoginScreenState extends State<LoginScreen>
                       opacity: _fadeAnim,
                       child: Column(
                         children: [
-                          Text('FST - UIN',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 24,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 3)),
+                          Text(
+                            'FST - UIN',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 3,
+                            ),
+                          ),
                           SizedBox(height: 4),
-                          Text('Gestion des Presences et des pointages',
-                              style: TextStyle(
-                                  color: Colors.white70, fontSize: 13)),
+                          Text(
+                            'Gestion des Presences et des pointages',
+                            style:
+                            TextStyle(color: Colors.white70, fontSize: 13),
+                          ),
                         ],
                       ),
                     ),
 
                     SizedBox(height: 24),
 
-                    // Formulaire
                     SlideTransition(
                       position: _slideAnim,
                       child: FadeTransition(
@@ -186,22 +203,18 @@ class _LoginScreenState extends State<LoginScreen>
                                       color: Colors.white,
                                       fontSize: 22,
                                       fontWeight: FontWeight.bold)),
-                              SizedBox(height: 4),
-                              Text('Connectez-vous a votre compte',
-                                  style: TextStyle(
-                                      color: Colors.white70, fontSize: 12)),
+
                               SizedBox(height: 20),
 
-                              // Email
                               _buildTextField(
                                 controller: _emailController,
                                 hint: 'exemple@fst.ne',
                                 icon: Icons.email_outlined,
                                 keyboardType: TextInputType.emailAddress,
                               ),
+
                               SizedBox(height: 14),
 
-                              // Mot de passe
                               _buildTextField(
                                 controller: _passwordController,
                                 hint: '••••••••',
@@ -210,156 +223,44 @@ class _LoginScreenState extends State<LoginScreen>
                                 suffixIcon: IconButton(
                                   icon: Icon(
                                     _obscurePassword
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
+                                        ? Icons.visibility_off
+                                        : Icons.visibility,
                                     color: Colors.white60,
-                                    size: 20,
                                   ),
                                   onPressed: () => setState(() =>
                                   _obscurePassword = !_obscurePassword),
                                 ),
                               ),
 
-                              SizedBox(height: 12),
-
-                              // Message erreur
-                              Obx(() {
-                                if (_authController
-                                    .errorMessage.value.isNotEmpty) {
-                                  return Container(
-                                    padding: EdgeInsets.all(10),
-                                    margin: EdgeInsets.only(bottom: 12),
-                                    decoration: BoxDecoration(
-                                      color: Colors.red.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(10),
-                                      border: Border.all(
-                                          color: Colors.red.withOpacity(0.5)),
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Icon(Icons.error_outline,
-                                            color: Colors.white, size: 16),
-                                        SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            _authController.errorMessage.value,
-                                            style: TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 12),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }
-                                return SizedBox.shrink();
-                              }),
-
                               SizedBox(height: 20),
 
-                              // Bouton Se connecter
                               Obx(() {
-                                return Container(
-                                  width: double.infinity,
-                                  height: 52,
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(16),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.2),
-                                        blurRadius: 10,
-                                        offset: Offset(0, 5),
-                                      ),
-                                    ],
+                                return ElevatedButton(
+                                  onPressed: _authController.isLoading.value
+                                      ? null
+                                      : () {
+                                    _authController.login(
+                                      _emailController.text.trim(),
+                                      _passwordController.text.trim(),
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    minimumSize: Size(double.infinity, 50),
+                                    backgroundColor: Colors.white,
                                   ),
-                                  child: ElevatedButton(
-                                    onPressed: _authController.isLoading.value
-                                        ? null
-                                        : () {
-                                      _authController.login(
-                                        _emailController.text.trim(),
-                                        _passwordController.text.trim(),
-                                      );
-                                    },
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: Colors.transparent,
-                                      shadowColor: Colors.transparent,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                          BorderRadius.circular(16)),
-                                    ),
-                                    child: _authController.isLoading.value
-                                        ? Row(
-                                      mainAxisAlignment:
-                                      MainAxisAlignment.center,
-                                      children: [
-                                        SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child:
-                                          CircularProgressIndicator(
-                                            color: Color(0xFF00855A),
-                                            strokeWidth: 2,
-                                          ),
-                                        ),
-                                        SizedBox(width: 12),
-                                        Text('Connexion...',
-                                            style: TextStyle(
-                                                color: Color(0xFF00855A),
-                                                fontWeight:
-                                                FontWeight.bold)),
-                                      ],
-                                    )
-                                        : Text(
-                                      'Se connecter',
-                                      style: TextStyle(
-                                        color: Color(0xFF00855A),
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        letterSpacing: 1,
-                                      ),
-                                    ),
-                                  ),
+                                  child: _authController.isLoading.value
+                                      ? CircularProgressIndicator()
+                                      : Text('Se connecter'),
                                 );
                               }),
 
                               SizedBox(height: 20),
 
-                              // Bouton empreinte
                               Center(
-                                child: Column(
-                                  children: [
-                                    GestureDetector(
-                                      onTap: _authenticateWithBiometrics,
-                                      child: Container(
-                                        width: 56,
-                                        height: 56,
-                                        decoration: BoxDecoration(
-                                          color: Color(0xFF00855A),
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black
-                                                  .withOpacity(0.2),
-                                              blurRadius: 10,
-                                              offset: Offset(0, 4),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Icon(
-                                          Icons.fingerprint,
-                                          color: Colors.white,
-                                          size: 32,
-                                        ),
-                                      ),
-                                    ),
-                                    SizedBox(height: 6),
-                                    Text('Connexion par empreinte',
-                                        style: TextStyle(
-                                            color: Colors.white70,
-                                            fontSize: 11)),
-                                  ],
+                                child: GestureDetector(
+                                  onTap: _authenticateWithBiometrics,
+                                  child: Icon(Icons.fingerprint,
+                                      size: 40, color: Colors.white),
                                 ),
                               ),
                             ],
@@ -368,11 +269,7 @@ class _LoginScreenState extends State<LoginScreen>
                       ),
                     ),
 
-                    SizedBox(height: 16),
-
-                    Text('© 2026 FST - Universite Islamique au Niger',
-                        style: TextStyle(color: Colors.white60, fontSize: 11)),
-                    SizedBox(height: 16),
+                    SizedBox(height: 20),
                   ],
                 ),
               ),
@@ -391,26 +288,16 @@ class _LoginScreenState extends State<LoginScreen>
     TextInputType? keyboardType,
     Widget? suffixIcon,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.3)),
-      ),
-      child: TextField(
-        controller: controller,
-        obscureText: obscure,
-        keyboardType: keyboardType,
-        style: TextStyle(color: Colors.white),
-        decoration: InputDecoration(
-          hintText: hint,
-          hintStyle: TextStyle(color: Colors.white54),
-          prefixIcon: Icon(icon, color: Colors.white70, size: 20),
-          suffixIcon: suffixIcon,
-          border: InputBorder.none,
-          contentPadding:
-          EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        ),
+    return TextField(
+      controller: controller,
+      obscureText: obscure,
+      keyboardType: keyboardType,
+      style: TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: TextStyle(color: Colors.white54),
+        prefixIcon: Icon(icon, color: Colors.white),
+        suffixIcon: suffixIcon,
       ),
     );
   }

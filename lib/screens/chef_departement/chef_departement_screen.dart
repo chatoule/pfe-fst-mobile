@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
+import 'validation_seances_screen.dart';
 
 class ChefDepartementScreen extends StatefulWidget {
   @override
@@ -182,6 +183,7 @@ class _ChefDepartementScreenState extends State<ChefDepartementScreen> {
                 _buildDrawerItem(1, Icons.people_outline, 'Suivi Presences'),
                 _buildDrawerItem(2, Icons.check_circle_outline, 'Valider Pointages'),
                 _buildDrawerItem(3, Icons.bar_chart_outlined, 'Rapports'),
+                _buildDrawerItem(4, Icons.verified_outlined, 'Valider Seances'),
               ],
             ),
           ),
@@ -242,6 +244,7 @@ class _ChefDepartementScreenState extends State<ChefDepartementScreen> {
       case 1: return _buildPresences();
       case 2: return _buildPointages();
       case 3: return _buildRapports();
+      case 4: return ValidationSeancesScreen();
       default: return _buildTableauBord();
     }
   }

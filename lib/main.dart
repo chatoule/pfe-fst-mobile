@@ -14,11 +14,15 @@ import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'controllers/auth_controller.dart';
 import 'screens/doyen/doyen_screen.dart';
+import 'screens/superviseur/confirmation_seances_screen.dart';
+import 'screens/chef_departement/validation_seances_screen.dart';
+import 'controllers/shared_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('fr_FR', null);
   Get.put(AuthController());
+  Get.put(SharedController());
   runApp(MyApp());
 }
 
@@ -41,6 +45,8 @@ class MyApp extends StatelessWidget {
         GetPage(name: '/secretaire', page: () => SecretaireScreen()),
         GetPage(name: '/fiche-pointage', page: () => FichePointageScreen(cours: {})),
         GetPage(name: '/doyen', page: () => DoyenScreen()),
+        GetPage(name: '/confirmation-seances', page: () => ConfirmationSeancesScreen()),
+        GetPage(name: '/validation-seances', page: () => ValidationSeancesScreen()),
       ],
     );
   }

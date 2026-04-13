@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
+import 'confirmation_seances_screen.dart';
 
 class SuperviseurScreen extends StatefulWidget {
   @override
@@ -178,7 +179,8 @@ class _SuperviseurScreenState extends State<SuperviseurScreen> {
                 _buildDrawerItem(0, Icons.check_circle_outline, 'Valider Pointages'),
                 _buildDrawerItem(1, Icons.people_outline, 'Suivi Presences'),
                 _buildDrawerItem(2, Icons.bar_chart_outlined, 'Statistiques'),
-                _buildDrawerItem(3, Icons.history_outlined, 'Historique'),
+                _buildDrawerItem(3, Icons.fact_check_outlined, 'Confirmer Seances'),
+                _buildDrawerItem(4, Icons.history_outlined, 'Historique'),
               ],
             ),
           ),
@@ -239,6 +241,7 @@ class _SuperviseurScreenState extends State<SuperviseurScreen> {
       case 1: return _buildPresences();
       case 2: return _buildStatistiques();
       case 3: return _buildHistorique();
+      case 4: return ConfirmationSeancesScreen();
       default: return _buildPointages();
     }
   }
