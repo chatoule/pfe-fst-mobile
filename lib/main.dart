@@ -17,6 +17,7 @@ import 'screens/doyen/doyen_screen.dart';
 import 'screens/superviseur/confirmation_seances_screen.dart';
 import 'screens/chef_departement/validation_seances_screen.dart';
 import 'controllers/shared_controller.dart';
+import 'screens/chef_departement/etat_vacation_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,6 +48,7 @@ class MyApp extends StatelessWidget {
         GetPage(name: '/doyen', page: () => DoyenScreen()),
         GetPage(name: '/confirmation-seances', page: () => ConfirmationSeancesScreen()),
         GetPage(name: '/validation-seances', page: () => ValidationSeancesScreen()),
+        GetPage(name: '/etat-vacation', page: () => EtatVacationScreen()),
       ],
     );
   }

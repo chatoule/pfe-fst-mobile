@@ -24,7 +24,7 @@ class SharedController extends GetxController {
         'id': 1,
         'enseignantId': 1,
         'enseignantNom': 'Ali Moussa',
-        'matiere': 'Algorithme',
+        'matiere': 'Algorithme',  // ← vrai nom
         'dateSeance': '2024-03-15',
         'heureDebut': '08h00',
         'heureFin': '10h00',
@@ -39,12 +39,12 @@ class SharedController extends GetxController {
         'id': 2,
         'enseignantId': 1,
         'enseignantNom': 'Ali Moussa',
-        'matiere': 'Structure de Donnees',
+        'matiere': 'Structure de Donnees', // ← vrai nom
         'dateSeance': '2024-03-14',
         'heureDebut': '10h00',
         'heureFin': '12h00',
         'duree': 115,
-        'contenu': 'Les listes chainées',
+        'contenu': 'Les listes chainees',
         'statut': 'CONFIRME',
         'confirmerSuperviseur': true,
         'valideChefDep': false,
@@ -54,12 +54,12 @@ class SharedController extends GetxController {
         'id': 3,
         'enseignantId': 1,
         'enseignantNom': 'Ali Moussa',
-        'matiere': 'Programmation Java',
+        'matiere': 'Programmation Java', // ← vrai nom
         'dateSeance': '2024-03-13',
         'heureDebut': '14h00',
         'heureFin': '16h00',
         'duree': 110,
-        'contenu': 'Programmation orientée objet',
+        'contenu': 'Programmation orientee objet',
         'statut': 'VALIDE',
         'confirmerSuperviseur': true,
         'valideChefDep': true,
@@ -67,19 +67,6 @@ class SharedController extends GetxController {
       },
     ];
   }
-
-  // ===== SOUMETTRE UNE FICHE =====
-  void soumettreFFiche(Map<String, dynamic> fiche) {
-    fichesPointage.add({
-      'id': fichesPointage.length + 1,
-      ...fiche,
-      'statut': 'EN_ATTENTE',
-      'confirmerSuperviseur': false,
-      'valideChefDep': false,
-      'dateSoumission': DateTime.now().toString(),
-    });
-  }
-
   // ===== SUPERVISEUR CONFIRME =====
   void confirmerParSuperviseur(int ficheId) {
     final index = fichesPointage.indexWhere((f) => f['id'] == ficheId);
