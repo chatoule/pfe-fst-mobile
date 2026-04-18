@@ -38,7 +38,7 @@ class _SplashScreenState extends State<SplashScreen>
     _logoController.forward();
 
     Future.delayed(Duration(milliseconds: 3500), () {
-      Get.offAllNamed('/login');
+      Get.offAllNamed('/finalisation-compte');
     });
   }
 

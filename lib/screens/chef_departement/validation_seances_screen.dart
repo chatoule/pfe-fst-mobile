@@ -33,18 +33,20 @@ class _ValidationSeancesScreenState extends State<ValidationSeancesScreen> {
       return;
     }
 
-    SharedController.to.signerChefDep(
-        'signature_chef_dep_${DateTime.now()}');
+    final signature = await _signatureController.toPngBytes();
+    if (signature != null) {
+      SharedController.to.signerChefDep(signature);
 
-    Get.snackbar(
-      'Succes !',
-      'Signature enregistree pour le semestre ${SharedController.to.semestre.value}',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Color(0xFF00855A),
-      colorText: Colors.white,
-      icon: Icon(Icons.check_circle, color: Colors.white),
-      duration: Duration(seconds: 3),
-    );
+      Get.snackbar(
+        'Succès !',
+        'Signature enregistrée pour le semestre ${SharedController.to.semestre.value}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Color(0xFF00855A),
+        colorText: Colors.white,
+        icon: Icon(Icons.check_circle, color: Colors.white),
+        duration: Duration(seconds: 3),
+      );
+    }
 
     setState(() => _showSignature = false);
     _signatureController.clear();
@@ -55,7 +57,7 @@ class _ValidationSeancesScreenState extends State<ValidationSeancesScreen> {
     return Scaffold(
       backgroundColor: Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text('Validation Seances',
+        title: Text('Validation Séances',
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Color(0xFF00855A),
         foregroundColor: Colors.white,
@@ -69,10 +71,34 @@ class _ValidationSeancesScreenState extends State<ValidationSeancesScreen> {
         final valides = fiches
             .where((f) => f['valideChefDep'] == true)
             .length;
-        final aSigne = SharedController.to.signatureChefDep.value.isNotEmpty;
+        final aSigne = SharedController.to.signatureChefDep.value != null;
 
         return Column(
         children: [
+        // En-tête Institutionnel
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Image.asset('assets/images/logo_uin.png', width: 45, height: 45),
+              const SizedBox(width: 12),
+              const Column(
+                children: [
+                  Text('UNIVERSITE ISLAMIQUE AU NIGER',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF003D29))),
+                  Text('FACULTE DES SCIENCES ET TECHNIQUES',
+                      style: TextStyle(fontSize: 11, color: Color(0xFF00855A))),
+                ],
+              ),
+            ],
+          ),
+        ),
+
         Container(
         padding: EdgeInsets.all(16),
         decoration: BoxDecoration(

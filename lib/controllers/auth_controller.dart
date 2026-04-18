@@ -4,6 +4,7 @@ import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
 class AuthController extends GetxController {
+  static AuthController get to => Get.find();
   final AuthService _authService = AuthService();
 
   var isLoading = false.obs;
@@ -18,31 +19,31 @@ class AuthController extends GetxController {
 
     if (email == 'enseignant@fst.ne' && password == '1234') {
       utilisateur.value = UserModel(
-        id: 1, nom: 'Moussa', prenom: 'Ali',
+        id: 1, nom: 'Moussa Ibrahim', prenom: 'Dr.',
         email: email, role: 'ENSEIGNANT', token: 'fake-token-123',
       );
       _redirecterSelonRole('ENSEIGNANT');
     } else if (email == 'etudiant@fst.ne' && password == '1234') {
       utilisateur.value = UserModel(
-        id: 2, nom: 'Aminata', prenom: 'Sow',
+        id: 2, nom: 'Mamane Sani', prenom: 'Abdoulaye',
         email: email, role: 'ETUDIANT', token: 'fake-token-456',
       );
       _redirecterSelonRole('ETUDIANT');
     } else if (email == 'doyen@fst.ne' && password == '1234') {
       utilisateur.value = UserModel(
-        id: 3, nom: 'Ibrahim', prenom: 'Maiga',
+        id: 3, nom: 'Oumarou Amadou', prenom: 'Dr. Ibrahim',
         email: email, role: 'DOYEN', token: 'fake-token-789',
       );
       _redirecterSelonRole('DOYEN');
     } else if (email == 'chef@fst.ne' && password == '1234') {
       utilisateur.value = UserModel(
-        id: 4, nom: 'Adamou', prenom: 'Issoufou',
+        id: 4, nom: 'Hassimi', prenom: 'Ibrahim Seyni',
         email: email, role: 'CHEF_DEPARTEMENT', token: 'fake-token-chef',
       );
       _redirecterSelonRole('CHEF_DEPARTEMENT');
     } else if (email == 'superviseur@fst.ne' && password == '1234') {
       utilisateur.value = UserModel(
-        id: 5, nom: 'Zeinabou', prenom: 'Hamidou',
+        id: 5, nom: '', prenom: 'Mubarak',
         email: email, role: 'SUPERVISEUR', token: 'fake-token-sup',
       );
       _redirecterSelonRole('SUPERVISEUR');

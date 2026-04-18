@@ -249,8 +249,15 @@ class _LoginScreenState extends State<LoginScreen>
                                     backgroundColor: Colors.white,
                                   ),
                                   child: _authController.isLoading.value
-                                      ? CircularProgressIndicator()
-                                      : Text('Se connecter'),
+                                      ? CircularProgressIndicator(color: Color(0xFF00855A))
+                                      : Text(
+                                          'SE CONNECTER',
+                                          style: TextStyle(
+                                            color: Color(0xFF00855A),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 16,
+                                          ),
+                                        ),
                                 );
                               }),
 

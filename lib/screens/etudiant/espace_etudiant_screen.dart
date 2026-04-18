@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
-import '../../controllers/presence_controller.dart';
+import '../../controllers/shared_controller.dart';
 import 'justificatif_screen.dart';
 
 class EspaceEtudiantScreen extends StatefulWidget {
@@ -11,14 +11,7 @@ class EspaceEtudiantScreen extends StatefulWidget {
 
 class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
   final AuthController _authController = Get.find<AuthController>();
-  final PresenceController _presenceController = Get.put(PresenceController());
   int _currentIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _presenceController.chargerDonneesFictives();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +164,7 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
     switch (_currentIndex) {
       case 0: return 'Mon Espace';
       case 1: return 'Mes Absences';
-      case 2: return 'Justificatifs';
+      case 2: return 'Mes Justificatifs';
       default: return 'Etudiant';
     }
   }
@@ -188,15 +181,14 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
   // ===================== DASHBOARD =====================
   Widget _buildDashboard() {
     return Obx(() {
-      final presences = _presenceController.presences;
-      final totalCours = presences.length;
-      final absences = presences.where((p) => !p.estPresent).length;
-      final presents = presences.where((p) => p.estPresent).length;
-      final taux = totalCours > 0
-          ? (presents / totalCours * 100)
-          : 0.0;
+      final user = _authController.utilisateur.value;
+      final etudiantId = user?.id ?? 2;
+      final presences = SharedController.to.getPresencesEtudiant(etudiantId);
+      final absences = SharedController.to.getAbsencesEtudiant(etudiantId);
+      final taux = SharedController.to.getTauxPresence(etudiantId);
       final tauxStr = taux.toStringAsFixed(1);
       final tauxOk = taux >= 75;
+      final enRattrapage = SharedController.to.estEnSessionRattrapage(etudiantId);
 
       return SingleChildScrollView(
         child: Column(
@@ -225,20 +217,17 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                         ),
-                        child: Obx(() {
-                          final user = _authController.utilisateur.value;
-                          return Center(
-                            child: Text(
-                              user != null
-                                  ? '${user.prenom[0]}${user.nom[0]}'
-                                  : 'E',
-                              style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold),
-                            ),
-                          );
-                        }),
+                        child: Center(
+                          child: Text(
+                            user != null
+                                ? '${user.prenom[0]}${user.nom[0]}'
+                                : 'E',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ),
                       ),
                       SizedBox(width: 12),
                       Column(
@@ -247,13 +236,13 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
                           Text('Bonjour,',
                               style: TextStyle(
                                   color: Colors.white70, fontSize: 13)),
-                          Obx(() => Text(
-                            '${_authController.utilisateur.value?.prenom ?? ""} ${_authController.utilisateur.value?.nom ?? ""}',
+                          Text(
+                            '${user?.prenom ?? ""} ${user?.nom ?? ""}',
                             style: TextStyle(
                                 color: Colors.white,
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold),
-                          )),
+                          ),
                         ],
                       ),
                     ],
@@ -269,8 +258,7 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
                     decoration: BoxDecoration(
                       color: Colors.white.withOpacity(0.15),
                       borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                          color: Colors.white.withOpacity(0.2)),
+                      border: Border.all(color: Colors.white.withOpacity(0.2)),
                     ),
                     child: Row(
                       children: [
@@ -335,26 +323,63 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Alerte si taux insuffisant
-                  if (!tauxOk)
+                  // Alerte session rattrapage
+                  if (enRattrapage)
                     Container(
-                      padding: EdgeInsets.all(12),
+                      padding: EdgeInsets.all(14),
                       margin: EdgeInsets.only(bottom: 16),
                       decoration: BoxDecoration(
                         color: Colors.red[50],
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.red[200]!),
+                        border: Border.all(color: Colors.red[300]!),
                       ),
                       child: Row(
                         children: [
                           Icon(Icons.warning_amber_rounded,
-                              color: Colors.red, size: 20),
+                              color: Colors.red, size: 24),
+                          SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('SESSION DE RATTRAPAGE DIRECTE',
+                                    style: TextStyle(
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12)),
+                                SizedBox(height: 4),
+                                Text(
+                                  'Vous avez ${SharedController.to.getNombreAbsencesNonJustifiees(etudiantId)} absences non justifiees. Vous etes automatiquement transfere en session de rattrapage.',
+                                  style: TextStyle(
+                                      color: Colors.red[700], fontSize: 11),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                  // Alerte taux insuffisant
+                  if (!tauxOk && !enRattrapage)
+                    Container(
+                      padding: EdgeInsets.all(12),
+                      margin: EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange[300]!),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline,
+                              color: Colors.orange, size: 20),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
                               'Attention ! Votre taux de presence est insuffisant. Le minimum requis est 75%.',
                               style: TextStyle(
-                                  color: Colors.red[700], fontSize: 12),
+                                  color: Colors.orange[700], fontSize: 12),
                             ),
                           ),
                         ],
@@ -371,13 +396,14 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
 
                   Row(
                     children: [
-                      _buildStatCard('Total', totalCours,
+                      _buildStatCard('Total', presences.length,
                           Color(0xFF00855A), Icons.list_alt),
                       SizedBox(width: 12),
-                      _buildStatCard('Presents', presents,
+                      _buildStatCard('Presents',
+                          presences.where((p) => p.estPresent).length,
                           Colors.blue, Icons.check_circle_outline),
                       SizedBox(width: 12),
-                      _buildStatCard('Absences', absences,
+                      _buildStatCard('Absences', absences.length,
                           Colors.red, Icons.cancel_outlined),
                     ],
                   ),
@@ -413,25 +439,22 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
                               color: Color(0xFF003D29))),
-                      if (absences > 0)
+                      if (absences.isNotEmpty)
                         TextButton(
                           onPressed: () =>
                               setState(() => _currentIndex = 1),
                           child: Text('Voir tout',
                               style: TextStyle(
-                                  color: Color(0xFF00855A),
-                                  fontSize: 13)),
+                                  color: Color(0xFF00855A), fontSize: 13)),
                         ),
                     ],
                   ),
                   SizedBox(height: 8),
 
-                  if (absences == 0)
-                    _buildEmptyState(
-                        'Aucune absence !', Icons.celebration)
+                  if (absences.isEmpty)
+                    _buildEmptyState('Aucune absence !', Icons.celebration)
                   else
-                    ...presences
-                        .where((p) => !p.estPresent)
+                    ...absences
                         .take(3)
                         .map((absence) => _buildAbsenceCard(absence))
                         .toList(),
@@ -447,14 +470,12 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
   // ===================== ABSENCES =====================
   Widget _buildAbsences() {
     return Obx(() {
-      final absences = _presenceController.presences
-          .where((p) => !p.estPresent)
-          .toList();
+      final etudiantId = _authController.utilisateur.value?.id ?? 2;
+      final absences = SharedController.to.getAbsencesEtudiant(etudiantId);
 
       if (absences.isEmpty) {
         return Center(
-          child: _buildEmptyState('Aucune absence !', Icons.celebration),
-        );
+            child: _buildEmptyState('Aucune absence !', Icons.celebration));
       }
 
       return ListView.builder(
@@ -470,12 +491,12 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
   // ===================== JUSTIFICATIFS =====================
   Widget _buildJustificatifs() {
     return Obx(() {
-      final absences = _presenceController.presences
-          .where((p) => !p.estPresent)
-          .toList();
+      final etudiantId = _authController.utilisateur.value?.id ?? 2;
+      final absences = SharedController.to.getAbsencesEtudiant(etudiantId);
 
       return Column(
         children: [
+          // Info header
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -489,7 +510,7 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
                 SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'Soumettez un justificatif pour chaque absence. Il sera examine par le chef de departement.',
+                    'Soumettez un justificatif pour chaque absence. Le Chef de Departement validera ou rejettera votre demande.',
                     style: TextStyle(color: Colors.white, fontSize: 12),
                   ),
                 ),
@@ -511,70 +532,7 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
                 itemCount: absences.length,
                 itemBuilder: (context, index) {
                   final absence = absences[index];
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(14),
-                      child: Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(Icons.event_busy,
-                                color: Colors.red, size: 22),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text('Cours du ${absence.dateSeance}',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 14,
-                                        color: Color(0xFF003D29))),
-                                SizedBox(height: 4),
-                                Text('ID: ${absence.coursId}',
-                                    style: TextStyle(
-                                        color: Colors.grey, fontSize: 12)),
-                              ],
-                            ),
-                          ),
-                          ElevatedButton(
-                            onPressed: () => Get.to(() =>
-                                JustificatifScreen(presenceId: absence.id)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Color(0xFF00855A),
-                              shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10)),
-                              padding: EdgeInsets.symmetric(
-                                  horizontal: 16, vertical: 10),
-                            ),
-                            child: Text('Justifier',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
+                  return _buildJustificatifCard(absence);
                 },
               ),
             ),
@@ -583,9 +541,269 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
     });
   }
 
-  // ===================== WIDGETS COMMUNS =====================
-  Widget _buildStatCard(
-      String label, int valeur, Color couleur, IconData icon) {
+  // ===================== WIDGETS =====================
+  Widget _buildAbsenceCard(dynamic absence) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Colors.red.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.event_busy, color: Colors.red, size: 22),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    absence.matiere ?? 'Cours du ${absence.dateSeance}',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Color(0xFF003D29)),
+                  ),
+                  SizedBox(height: 2),
+                  Row(children: [
+                    Icon(Icons.calendar_today, size: 12, color: Colors.grey),
+                    SizedBox(width: 4),
+                    Text(absence.dateSeance,
+                        style: TextStyle(color: Colors.grey, fontSize: 12)),
+                  ]),
+                  // Statut justificatif
+                  if (absence.statutJustification != null)
+                    SizedBox(height: 4),
+                  if (absence.statutJustification != null)
+                    _buildStatutJustif(absence.statutJustification!),
+                ],
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Get.to(() =>
+                  JustificatifScreen(presenceId: absence.id)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF00855A),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10)),
+                padding:
+                EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              ),
+              child: Text('Justifier',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJustificatifCard(dynamic absence) {
+    final aJustificatif = absence.justificatifUrl != null;
+    final statut = absence.statutJustification;
+
+    Color couleurStatut;
+    IconData iconStatut;
+    String texteStatut;
+
+    if (statut == 'VALIDE') {
+      couleurStatut = Color(0xFF00855A);
+      iconStatut = Icons.check_circle;
+      texteStatut = 'Justificatif valide';
+    } else if (statut == 'REJETE') {
+      couleurStatut = Colors.red;
+      iconStatut = Icons.cancel;
+      texteStatut = 'Justificatif rejete';
+    } else if (statut == 'EN_ATTENTE') {
+      couleurStatut = Colors.orange;
+      iconStatut = Icons.pending;
+      texteStatut = 'En attente de validation';
+    } else {
+      couleurStatut = Colors.grey;
+      iconStatut = Icons.upload_file;
+      texteStatut = 'Aucun justificatif';
+    }
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: couleurStatut.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(iconStatut, color: couleurStatut, size: 22),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        absence.matiere ?? 'Cours du ${absence.dateSeance}',
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Color(0xFF003D29)),
+                      ),
+                      SizedBox(height: 2),
+                      Row(children: [
+                        Icon(Icons.calendar_today,
+                            size: 12, color: Colors.grey),
+                        SizedBox(width: 4),
+                        Text(absence.dateSeance,
+                            style:
+                            TextStyle(color: Colors.grey, fontSize: 12)),
+                      ]),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+
+            SizedBox(height: 10),
+
+            // Statut
+            Container(
+              padding: EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: couleurStatut.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: couleurStatut.withOpacity(0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(iconStatut, color: couleurStatut, size: 16),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(texteStatut,
+                            style: TextStyle(
+                                color: couleurStatut,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12)),
+                        if (absence.typeJustificatif != null)
+                          Text('Type: ${absence.typeJustificatif}',
+                              style: TextStyle(
+                                  color: Colors.grey, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Bouton soumettre si pas encore de justificatif
+            if (!aJustificatif || statut == 'REJETE') ...[
+              SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => Get.to(() =>
+                      JustificatifScreen(presenceId: absence.id)),
+                  icon: Icon(Icons.upload_file, color: Colors.white, size: 16),
+                  label: Text(
+                    statut == 'REJETE'
+                        ? 'Renvoyer un justificatif'
+                        : 'Soumettre un justificatif',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: statut == 'REJETE'
+                        ? Colors.orange
+                        : Color(0xFF00855A),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatutJustif(String statut) {
+    Color couleur;
+    String texte;
+    IconData icon;
+
+    switch (statut) {
+      case 'VALIDE':
+        couleur = Color(0xFF00855A);
+        texte = 'Valide';
+        icon = Icons.check_circle;
+        break;
+      case 'REJETE':
+        couleur = Colors.red;
+        texte = 'Rejete';
+        icon = Icons.cancel;
+        break;
+      case 'EN_ATTENTE':
+        couleur = Colors.orange;
+        texte = 'En attente';
+        icon = Icons.pending;
+        break;
+      default:
+        return SizedBox.shrink();
+    }
+
+    return Row(
+      children: [
+        Icon(icon, size: 12, color: couleur),
+        SizedBox(width: 4),
+        Text(texte,
+            style: TextStyle(
+                color: couleur, fontSize: 11, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String label, int valeur, Color couleur, IconData icon) {
     return Expanded(
       child: Container(
         padding: EdgeInsets.all(14),
@@ -662,72 +880,6 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
                       color: Color(0xFF003D29))),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAbsenceCard(dynamic absence) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.06),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(Icons.event_busy, color: Colors.red, size: 22),
-            ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Cours du ${absence.dateSeance}',
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Color(0xFF003D29))),
-                  SizedBox(height: 4),
-                  Text('Cours ID: ${absence.coursId}',
-                      style:
-                      TextStyle(color: Colors.grey, fontSize: 12)),
-                ],
-              ),
-            ),
-            ElevatedButton(
-              onPressed: () =>
-                  Get.to(() => JustificatifScreen(presenceId: absence.id)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF00855A),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10)),
-                padding:
-                EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              ),
-              child: Text('Justifier',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold)),
-            ),
-          ],
         ),
       ),
     );

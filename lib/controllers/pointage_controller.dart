@@ -9,31 +9,46 @@ class PointageController extends GetxController {
   var errorMessage = ''.obs;
   var coursList = <CoursModel>[].obs;
 
+  var totalHeuresMois = 0.0.obs;
+  var seancesValidees = 0.obs;
+
   @override
   void onInit() {
     super.onInit();
     chargerDonneesFictives();
+    calculerStatistiques();
+  }
+
+  void calculerStatistiques() {
+    // Simulation du calcul des heures (2h par séance terminée)
+    totalHeuresMois.value = coursList.where((c) => c.statut == 'TERMINE').length * 2.0;
+    seancesValidees.value = coursList.where((c) => c.statut == 'TERMINE').length;
   }
 
   void chargerDonneesFictives() {
+    final today = DateTime.now();
+    final tomorrow = today.add(const Duration(days: 1));
+    
+    String formatDate(DateTime d) => d.toString().split(' ')[0];
+
     coursList.value = [
       CoursModel(
-        id: 1, matiere: 'Mathematiques',
+        id: 1, matiere: 'Algorithmique et Structure de Données',
         enseignantNom: 'Moussa', enseignantPrenom: 'Ali',
-        dateSeance: '2024-03-15', heureDebut: '08h00',
-        heureFin: '10h00', salle: 'A101', statut: 'PLANIFIE',
+        dateSeance: formatDate(today), heureDebut: '08h00',
+        heureFin: '10h00', salle: 'Amphi A', statut: 'PLANIFIE',
       ),
       CoursModel(
-        id: 2, matiere: 'Physique',
-        enseignantNom: 'Diallo', enseignantPrenom: 'Ibrahim',
-        dateSeance: '2024-03-16', heureDebut: '10h00',
-        heureFin: '12h00', salle: 'B202', statut: 'TERMINE',
+        id: 2, matiere: 'Base de Données Relationnelles',
+        enseignantNom: 'Moussa', enseignantPrenom: 'Ali',
+        dateSeance: formatDate(today), heureDebut: '10h00',
+        heureFin: '12h00', salle: 'Salle B1', statut: 'TERMINE',
       ),
       CoursModel(
-        id: 3, matiere: 'Chimie',
-        enseignantNom: 'Maiga', enseignantPrenom: 'Fatima',
-        dateSeance: '2024-03-17', heureDebut: '14h00',
-        heureFin: '16h00', salle: 'C303', statut: 'PLANIFIE',
+        id: 3, matiere: 'Développement Mobile Flutter',
+        enseignantNom: 'Moussa', enseignantPrenom: 'Ali',
+        dateSeance: formatDate(tomorrow), heureDebut: '14h00',
+        heureFin: '16h00', salle: 'Labo Info', statut: 'PLANIFIE',
       ),
     ];
   }
@@ -49,19 +64,21 @@ class PointageController extends GetxController {
   Future<void> pointerCours(int coursId) async {
     final index = coursList.indexWhere((c) => c.id == coursId);
     if (index != -1) {
+      final c = coursList[index];
       coursList[index] = CoursModel(
-        id: coursList[index].id,
-        matiere: coursList[index].matiere,
-        enseignantNom: coursList[index].enseignantNom,
-        enseignantPrenom: coursList[index].enseignantPrenom,
-        dateSeance: coursList[index].dateSeance,
-        heureDebut: coursList[index].heureDebut,
-        heureFin: coursList[index].heureFin,
-        salle: coursList[index].salle,
+        id: c.id,
+        matiere: c.matiere,
+        enseignantNom: c.enseignantNom,
+        enseignantPrenom: c.enseignantPrenom,
+        dateSeance: c.dateSeance,
+        heureDebut: c.heureDebut,
+        heureFin: c.heureFin,
+        salle: c.salle,
         statut: 'TERMINE',
       );
-      Get.snackbar('Succes', 'Cours pointe avec succes',
-          snackPosition: SnackPosition.BOTTOM);
+      calculerStatistiques();
+      coursList.refresh();
+      // Le snackbar est maintenant géré dans FichePointageScreen pour éviter les doublons ou conflits de timing
     }
   }
 }

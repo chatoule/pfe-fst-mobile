@@ -162,10 +162,10 @@ class AppDrawer extends StatelessWidget {
         ];
       case 'DOYEN':
         return [
-          _buildMenuItem(Icons.dashboard, 'Tableau de bord', '/dashboard', context),
-          _buildMenuItem(Icons.verified, 'Valider Etats', '/dashboard', context),
-          _buildMenuItem(Icons.bar_chart, 'Statistiques', '/dashboard', context),
-          _buildMenuItem(Icons.picture_as_pdf, 'Rapports', '/dashboard', context),
+          _buildMenuItem(Icons.dashboard, 'Tableau de bord', '/doyen', context),
+          _buildMenuItem(Icons.verified, 'Valider Etats', '/doyen', context),
+          _buildMenuItem(Icons.bar_chart, 'Statistiques', '/doyen', context),
+          _buildMenuItem(Icons.picture_as_pdf, 'Rapports', '/doyen', context),
         ];
       default:
         return [];

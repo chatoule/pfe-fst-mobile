@@ -1,18 +1,23 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:signature/signature.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/shared_controller.dart';
+import '../../controllers/pointage_controller.dart';
 
 class FichePointageScreen extends StatefulWidget {
   final Map<String, dynamic> cours;
-  FichePointageScreen({required this.cours});
+  const FichePointageScreen({super.key, required this.cours});
 
   @override
-  _FichePointageScreenState createState() => _FichePointageScreenState();
+  State<FichePointageScreen> createState() => _FichePointageScreenState();
 }
 
 class _FichePointageScreenState extends State<FichePointageScreen> {
   final AuthController _authController = Get.find<AuthController>();
+  final SharedController _sharedController = Get.find<SharedController>();
   final TextEditingController _contenuController = TextEditingController();
   final SignatureController _signatureController = SignatureController(
     penStrokeWidth: 2,
@@ -30,7 +35,7 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
         'Vendredi', 'Samedi', 'Dimanche'];
       return jours[d.weekday - 1];
     } catch (e) {
-      return '';
+      return 'Inconnu';
     }
   }
 
@@ -44,18 +49,18 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
   }
 
   String _getMois(int mois) {
-    const moisList = ['Janvier', 'Fevrier', 'Mars', 'Avril', 'Mai', 'Juin',
-      'Juillet', 'Aout', 'Septembre', 'Octobre', 'Novembre', 'Decembre'];
+    const moisList = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin',
+      'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
     return moisList[mois - 1];
   }
 
   int _calculerNbHeures(String heureDebut, String heureFin) {
     try {
-      final debut = int.parse(heureDebut.replaceAll('h', '').split(':')[0]);
-      final fin = int.parse(heureFin.replaceAll('h', '').split(':')[0]);
-      return fin - debut;
+      final h1 = int.parse(heureDebut.split('h')[0]);
+      final h2 = int.parse(heureFin.split('h')[0]);
+      return h2 - h1;
     } catch (e) {
-      return 0;
+      return 2;
     }
   }
 
@@ -65,19 +70,27 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
       _signatureVide = _signatureController.isEmpty;
     });
 
-    if (_contenuVide || _signatureVide) return;
+    if (_contenuVide || _signatureVide) {
+      Get.snackbar(
+        'Champs manquants',
+        'Veuillez remplir le contenu et signer.',
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
 
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => Center(
         child: Container(
-          padding: EdgeInsets.all(24),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
           ),
-          child: Column(
+          child: const Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               CircularProgressIndicator(color: Color(0xFF00855A)),
@@ -89,21 +102,41 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
       ),
     );
 
-    await Future.delayed(Duration(seconds: 2));
-    Get.back();
+    // Capture de la signature
+    final signatureBytes = await _signatureController.toPngBytes();
+    
+    final user = _authController.utilisateur.value;
+    final fiche = {
+      'enseignantId': user?.id ?? 0,
+      'enseignantNom': '${user?.prenom} ${user?.nom}',
+      'matiere': widget.cours['matiere'],
+      'dateSeance': widget.cours['dateSeance'] ?? DateTime.now().toString().split(' ')[0],
+      'heureDebut': widget.cours['heureDebut'] ?? '08h00',
+      'heureFin': widget.cours['heureFin'] ?? '10h00',
+      'duree': _calculerNbHeures(widget.cours['heureDebut'] ?? '08h00', widget.cours['heureFin'] ?? '10h00') * 60,
+      'contenu': _contenuController.text,
+      'niveau': widget.cours['niveau'] ?? 'L3',
+      'signatureEnseignant': signatureBytes,
+    };
+
+    _sharedController.soumettreFiche(fiche);
+
+    // Mettre à jour le statut du cours dans le planning
+    if (widget.cours['id'] != null) {
+      Get.find<PointageController>().pointerCours(widget.cours['id']);
+    }
+
+    Get.back(); // Retourne à l'écran précédent (Dashboard)
 
     Get.snackbar(
-      'Succes !',
-      'Fiche de pointage soumise avec succes',
-      snackPosition: SnackPosition.BOTTOM,
-      backgroundColor: Color(0xFF00855A),
+      'Fiche Soumise !',
+      'Votre fiche est en attente de confirmation par le Superviseur et de validation par le Chef de Département.',
+      snackPosition: SnackPosition.TOP, // Changé en TOP pour être plus visible sur le Dashboard
+      backgroundColor: const Color(0xFF00855A),
       colorText: Colors.white,
-      duration: Duration(seconds: 3),
-      icon: Icon(Icons.check_circle, color: Colors.white),
+      duration: const Duration(seconds: 4),
+      icon: const Icon(Icons.send_rounded, color: Colors.white),
     );
-
-    await Future.delayed(Duration(milliseconds: 500));
-    Get.back();
   }
 
   @override
@@ -118,26 +151,25 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
     final user = _authController.utilisateur.value;
     final cours = widget.cours;
     final nbHeures = _calculerNbHeures(
-        cours['heureDebut'] ?? '', cours['heureFin'] ?? '');
+        cours['heureDebut'] ?? '08h00', cours['heureFin'] ?? '10h00');
     final maintenant = DateTime.now();
 
     return Scaffold(
-      backgroundColor: Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text('Fiche de Pointage',
+        title: const Text('Fiche de Pointage',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Color(0xFF00855A),
+        backgroundColor: const Color(0xFF00855A),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // ===== EN-TETE AVEC GRADIENT =====
             Container(
               width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 24, horizontal: 20),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
@@ -146,7 +178,6 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
               ),
               child: Column(
                 children: [
-                  // Logo
                   Container(
                     width: 80,
                     height: 80,
@@ -155,45 +186,43 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                       color: Colors.white,
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.2),
+                          color: Colors.black.withValues(alpha: 0.2),
                           blurRadius: 15,
-                          offset: Offset(0, 5),
+                          offset: const Offset(0, 5),
                         ),
                       ],
                     ),
                     child: ClipOval(
                       child: Padding(
-                        padding: EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(8),
                         child: Image.asset(
                           'assets/images/logo_uin.png',
                           fit: BoxFit.contain,
+                          errorBuilder: (_, __, ___) => const Icon(Icons.school, size: 40, color: Color(0xFF00855A)),
                         ),
                       ),
                     ),
                   ),
-                  SizedBox(height: 12),
-                  Text('UNIVERSITE ISLAMIQUE AU NIGER',
+                  const SizedBox(height: 12),
+                  const Text('UNIVERSITE ISLAMIQUE AU NIGER',
                       style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
                           fontSize: 13,
                           letterSpacing: 0.5),
                       textAlign: TextAlign.center),
-                  SizedBox(height: 4),
-                  Text('FACULTE DES SCIENCES ET TECHNIQUES',
+                  const SizedBox(height: 4),
+                  const Text('FACULTE DES SCIENCES ET TECHNIQUES',
                       style: TextStyle(color: Colors.white70, fontSize: 11),
                       textAlign: TextAlign.center),
-                  Text('ORGANISATION DE LA COOPERATION ISLAMIQUE',
-                      style: TextStyle(color: Colors.white60, fontSize: 10),
-                      textAlign: TextAlign.center),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Container(
-                    padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
                     decoration: BoxDecoration(
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(25),
                     ),
-                    child: Text('FICHE DE POINTAGE',
+                    child: const Text('FICHE DE POINTAGE',
                         style: TextStyle(
                             color: Color(0xFF00855A),
                             fontWeight: FontWeight.bold,
@@ -205,10 +234,9 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
             ),
 
             Padding(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  // ===== INFOS GENERALES =====
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -216,31 +244,30 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withValues(alpha: 0.06),
                           blurRadius: 10,
-                          offset: Offset(0, 4),
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
                     child: Column(
                       children: [
-                        // Titre section
                         Container(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: Color(0xFF00855A).withOpacity(0.08),
-                            borderRadius: BorderRadius.only(
+                            color: const Color(0xFF00855A).withValues(alpha: 0.08),
+                            borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(16),
                               topRight: Radius.circular(16),
                             ),
                           ),
-                          child: Row(
+                          child: const Row(
                             children: [
                               Icon(Icons.info_outline,
                                   color: Color(0xFF00855A), size: 18),
                               SizedBox(width: 8),
-                              Text('Informations generales',
+                              Text('Informations générales',
                                   style: TextStyle(
                                       color: Color(0xFF00855A),
                                       fontWeight: FontWeight.bold,
@@ -249,11 +276,11 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                           ),
                         ),
                         Padding(
-                          padding: EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
                             children: [
                               _buildInfoRow(Icons.calendar_today,
-                                  'Annee academique', '2025-2026'),
+                                  'Année académique', '2025-2026'),
                               _buildInfoRow(Icons.layers,
                                   'Semestre', cours['semestre'] ?? 'S1'),
                               _buildInfoRow(Icons.date_range,
@@ -265,8 +292,6 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                                   'Module', cours['matiere'] ?? ''),
                               _buildInfoRow(Icons.school,
                                   'Niveau', cours['niveau'] ?? 'L3'),
-                              _buildInfoRow(Icons.workspace_premium,
-                                  'Programme', 'Bachelor'),
                             ],
                           ),
                         ),
@@ -274,9 +299,8 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                     ),
                   ),
 
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                  // ===== SEANCE =====
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -284,30 +308,30 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withValues(alpha: 0.06),
                           blurRadius: 10,
-                          offset: Offset(0, 4),
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
                     child: Column(
                       children: [
                         Container(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: Color(0xFF00855A).withOpacity(0.08),
-                            borderRadius: BorderRadius.only(
+                            color: const Color(0xFF00855A).withValues(alpha: 0.08),
+                            borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(16),
                               topRight: Radius.circular(16),
                             ),
                           ),
-                          child: Row(
+                          child: const Row(
                             children: [
                               Icon(Icons.event_note,
                                   color: Color(0xFF00855A), size: 18),
                               SizedBox(width: 8),
-                              Text('Detail de la seance',
+                              Text('Détail de la séance',
                                   style: TextStyle(
                                       color: Color(0xFF00855A),
                                       fontWeight: FontWeight.bold,
@@ -316,10 +340,9 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                           ),
                         ),
                         Padding(
-                          padding: EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
                             children: [
-                              // Infos seance
                               Row(
                                 children: [
                                   Expanded(
@@ -327,48 +350,47 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                                       Icons.calendar_today,
                                       'Jour',
                                       _getNomJour(cours['dateSeance'] ??
-                                          maintenant.toString()),
+                                          maintenant.toString().split(' ')[0]),
                                       Colors.blue,
                                     ),
                                   ),
-                                  SizedBox(width: 12),
+                                  const SizedBox(width: 12),
                                   Expanded(
                                     child: _buildSeanceInfo(
                                       Icons.date_range,
                                       'Date',
                                       _formaterDate(cours['dateSeance'] ??
-                                          maintenant.toString()),
+                                          maintenant.toString().split(' ')[0]),
                                       Colors.purple,
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 12),
+                              const SizedBox(height: 12),
                               Row(
                                 children: [
                                   Expanded(
                                     child: _buildSeanceInfo(
                                       Icons.access_time,
                                       'Horaire',
-                                      '${cours['heureDebut'] ?? ''} - ${cours['heureFin'] ?? ''}',
+                                      '${cours['heureDebut'] ?? '08h00'} - ${cours['heureFin'] ?? '10h00'}',
                                       Colors.orange,
                                     ),
                                   ),
-                                  SizedBox(width: 12),
+                                  const SizedBox(width: 12),
                                   Expanded(
                                     child: _buildSeanceInfo(
                                       Icons.timer,
-                                      'Duree',
+                                      'Durée',
                                       '${nbHeures}h00',
-                                      Color(0xFF00855A),
+                                      const Color(0xFF00855A),
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 16),
+                              const SizedBox(height: 16),
 
-                              // Contenu du cours
-                              Align(
+                              const Align(
                                 alignment: Alignment.centerLeft,
                                 child: Text('Contenu du cours',
                                     style: TextStyle(
@@ -376,31 +398,31 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                                         fontSize: 14,
                                         color: Color(0xFF003D29))),
                               ),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               TextField(
                                 controller: _contenuController,
                                 maxLines: 5,
                                 decoration: InputDecoration(
                                   hintText:
-                                  'Decrivez les grandes lignes du cours dispense...',
+                                  'Décrivez les grandes lignes du cours dispensé...',
                                   hintStyle: TextStyle(
                                       color: Colors.grey[400], fontSize: 13),
                                   filled: true,
-                                  fillColor: Color(0xFFF5FAF7),
+                                  fillColor: const Color(0xFFF5FAF7),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                     borderSide: BorderSide.none,
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(
+                                    borderSide: const BorderSide(
                                         color: Color(0xFF00855A), width: 2),
                                   ),
                                   errorText:
                                   _contenuVide ? 'Champ obligatoire' : null,
                                   errorBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
-                                    borderSide: BorderSide(color: Colors.red),
+                                    borderSide: const BorderSide(color: Colors.red),
                                   ),
                                 ),
                               ),
@@ -411,9 +433,8 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                     ),
                   ),
 
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                  // ===== SIGNATURE =====
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -427,20 +448,20 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withValues(alpha: 0.06),
                           blurRadius: 10,
-                          offset: Offset(0, 4),
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
                     child: Column(
                       children: [
                         Container(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: Color(0xFF00855A).withOpacity(0.08),
-                            borderRadius: BorderRadius.only(
+                            color: const Color(0xFF00855A).withValues(alpha: 0.08),
+                            borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(16),
                               topRight: Radius.circular(16),
                             ),
@@ -448,7 +469,7 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              Row(
+                              const Row(
                                 children: [
                                   Icon(Icons.draw_outlined,
                                       color: Color(0xFF00855A), size: 18),
@@ -465,9 +486,9 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                                   _signatureController.clear();
                                   setState(() => _signatureVide = false);
                                 },
-                                icon: Icon(Icons.refresh,
+                                icon: const Icon(Icons.refresh,
                                     color: Colors.red, size: 16),
-                                label: Text('Effacer',
+                                label: const Text('Effacer',
                                     style: TextStyle(
                                         color: Colors.red, fontSize: 12)),
                                 style: TextButton.styleFrom(
@@ -477,19 +498,19 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                           ),
                         ),
                         Padding(
-                          padding: EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
                             children: [
                               if (_signatureVide)
                                 Container(
-                                  padding: EdgeInsets.all(8),
-                                  margin: EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(8),
+                                  margin: const EdgeInsets.only(bottom: 8),
                                   decoration: BoxDecoration(
                                     color: Colors.red[50],
                                     borderRadius: BorderRadius.circular(8),
                                     border: Border.all(color: Colors.red[200]!),
                                   ),
-                                  child: Row(
+                                  child: const Row(
                                     children: [
                                       Icon(Icons.error_outline,
                                           color: Colors.red, size: 16),
@@ -502,7 +523,7 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                                 ),
                               Container(
                                 decoration: BoxDecoration(
-                                  color: Color(0xFFF5FAF7),
+                                  color: const Color(0xFFF5FAF7),
                                   borderRadius: BorderRadius.circular(12),
                                   border: Border.all(
                                       color: Colors.grey[200]!, width: 1),
@@ -512,12 +533,12 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                                   child: Signature(
                                     controller: _signatureController,
                                     height: 180,
-                                    backgroundColor: Color(0xFFF5FAF7),
+                                    backgroundColor: const Color(0xFFF5FAF7),
                                   ),
                                 ),
                               ),
-                              SizedBox(height: 8),
-                              Row(
+                              const SizedBox(height: 8),
+                              const Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Icon(Icons.touch_app,
@@ -537,9 +558,8 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                     ),
                   ),
 
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                  // ===== VALIDATION =====
                   Container(
                     width: double.infinity,
                     decoration: BoxDecoration(
@@ -547,25 +567,25 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
+                          color: Colors.black.withValues(alpha: 0.06),
                           blurRadius: 10,
-                          offset: Offset(0, 4),
+                          offset: const Offset(0, 4),
                         ),
                       ],
                     ),
                     child: Column(
                       children: [
                         Container(
-                          padding: EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: Color(0xFF00855A).withOpacity(0.08),
-                            borderRadius: BorderRadius.only(
+                            color: const Color(0xFF00855A).withValues(alpha: 0.08),
+                            borderRadius: const BorderRadius.only(
                               topLeft: Radius.circular(16),
                               topRight: Radius.circular(16),
                             ),
                           ),
-                          child: Row(
+                          child: const Row(
                             children: [
                               Icon(Icons.verified_outlined,
                                   color: Color(0xFF00855A), size: 18),
@@ -579,14 +599,14 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                           ),
                         ),
                         Padding(
-                          padding: EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(16),
                           child: Row(
                             children: [
                               Expanded(
                                 child: _buildValidationBox(
                                     'LE SUPERVISEUR', Icons.manage_accounts),
                               ),
-                              SizedBox(width: 16),
+                              const SizedBox(width: 16),
                               Expanded(
                                 child: _buildValidationBox(
                                     'CHEF DEPARTEMENT', Icons.supervisor_account),
@@ -598,29 +618,28 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                     ),
                   ),
 
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
-                  // ===== BOUTON SOUMETTRE =====
                   Container(
                     width: double.infinity,
                     height: 56,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [Color(0xFF00A86B), Color(0xFF00855A)],
                       ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0xFF00855A).withOpacity(0.4),
+                          color: const Color(0xFF00855A).withValues(alpha: 0.4),
                           blurRadius: 15,
-                          offset: Offset(0, 6),
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
                     child: ElevatedButton.icon(
                       onPressed: _soumettre,
-                      icon: Icon(Icons.send_rounded, color: Colors.white),
-                      label: Text('Soumettre la fiche',
+                      icon: const Icon(Icons.send_rounded, color: Colors.white),
+                      label: const Text('Soumettre la fiche',
                           style: TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -635,7 +654,7 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
                     ),
                   ),
 
-                  SizedBox(height: 32),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
@@ -647,19 +666,19 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
 
   Widget _buildInfoRow(IconData icon, String label, String valeur) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
           Container(
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: Color(0xFF00855A).withOpacity(0.08),
+              color: const Color(0xFF00855A).withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: Color(0xFF00855A), size: 16),
+            child: Icon(icon, color: const Color(0xFF00855A), size: 16),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           SizedBox(
             width: 130,
             child: Text('$label :',
@@ -667,7 +686,7 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
           ),
           Expanded(
             child: Text(valeur,
-                style: TextStyle(
+                style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     fontSize: 13,
                     color: Color(0xFF003D29))),
@@ -680,11 +699,11 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
   Widget _buildSeanceInfo(
       IconData icon, String label, String valeur, Color couleur) {
     return Container(
-      padding: EdgeInsets.all(12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: couleur.withOpacity(0.08),
+        color: couleur.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: couleur.withOpacity(0.2)),
+        border: Border.all(color: couleur.withValues(alpha: 0.2)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -692,15 +711,15 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
           Row(
             children: [
               Icon(icon, color: couleur, size: 14),
-              SizedBox(width: 4),
+              const SizedBox(width: 4),
               Text(label,
                   style: TextStyle(color: couleur, fontSize: 11,
                       fontWeight: FontWeight.w500)),
             ],
           ),
-          SizedBox(height: 4),
+          const SizedBox(height: 4),
           Text(valeur,
-              style: TextStyle(
+              style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                   color: Color(0xFF003D29))),
@@ -711,31 +730,31 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
 
   Widget _buildValidationBox(String titre, IconData icon) {
     return Container(
-      padding: EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.orange.withOpacity(0.05),
+        color: Colors.orange.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.orange.withOpacity(0.2)),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
       ),
       child: Column(
         children: [
           Icon(icon, color: Colors.orange, size: 28),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(titre,
               style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 11,
                   color: Colors.grey[700]),
               textAlign: TextAlign.center),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.1),
+              color: Colors.orange.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.3)),
             ),
-            child: Text('En attente',
+            child: const Text('En attente',
                 style: TextStyle(
                     color: Colors.orange,
                     fontSize: 10,

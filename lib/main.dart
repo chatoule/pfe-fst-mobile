@@ -18,12 +18,16 @@ import 'screens/superviseur/confirmation_seances_screen.dart';
 import 'screens/chef_departement/validation_seances_screen.dart';
 import 'controllers/shared_controller.dart';
 import 'screens/chef_departement/etat_vacation_screen.dart';
+import 'screens/finalisation_compte_screen.dart';
+
+import 'controllers/presence_controller.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await initializeDateFormatting('fr_FR', null);
   Get.put(AuthController());
   Get.put(SharedController());
+  Get.put(PresenceController());
   runApp(MyApp());
 }
 
@@ -44,11 +48,12 @@ class MyApp extends StatelessWidget {
         GetPage(name: '/superviseur', page: () => SuperviseurScreen()),
         GetPage(name: '/chef-departement', page: () => ChefDepartementScreen()),
         GetPage(name: '/secretaire', page: () => SecretaireScreen()),
-        GetPage(name: '/fiche-pointage', page: () => FichePointageScreen(cours: {})),
+        GetPage(name: '/fiche-pointage', page: () => FichePointageScreen(cours: Get.arguments ?? {})),
         GetPage(name: '/doyen', page: () => DoyenScreen()),
         GetPage(name: '/confirmation-seances', page: () => ConfirmationSeancesScreen()),
         GetPage(name: '/validation-seances', page: () => ValidationSeancesScreen()),
         GetPage(name: '/etat-vacation', page: () => EtatVacationScreen()),
+        GetPage(name: '/finalisation-compte', page: () => const FinalisationCompteScreen()),
       ],
     );
   }

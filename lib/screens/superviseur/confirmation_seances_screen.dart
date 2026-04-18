@@ -36,11 +36,13 @@ class _ConfirmationSeancesScreenState
     }
 
     final signatureBytes = await _signatureController.toPngBytes();
-    SharedController.to.signerSuperviseur('signature_superviseur_${DateTime.now()}');
+    if (signatureBytes != null) {
+      SharedController.to.signerSuperviseur(signatureBytes);
+    }
 
     Get.snackbar(
-      'Succes !',
-      'Signature enregistree pour le semestre ${SharedController.to.semestre.value}',
+      'Succès !',
+      'Signature enregistrée pour le semestre ${SharedController.to.semestre.value}',
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Color(0xFF00855A),
       colorText: Colors.white,
@@ -57,7 +59,7 @@ class _ConfirmationSeancesScreenState
     return Scaffold(
       backgroundColor: Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text('Confirmation Seances',
+        title: Text('Confirmation Séances',
             style: TextStyle(fontWeight: FontWeight.bold)),
         backgroundColor: Color(0xFF00855A),
         foregroundColor: Colors.white,
@@ -65,9 +67,9 @@ class _ConfirmationSeancesScreenState
       ),
       body: Obx(() {
         final fiches = SharedController.to.fichesPointage;
-        final enAttente = fiches.where((f) => f['statut'] == 'EN_ATTENTE').length;
+        final enAttente = fiches.where((f) => f['statut'] == 'EN_ATTENTE' || f['statut'] == 'EN_COURS').length;
         final confirmees = fiches.where((f) => f['confirmerSuperviseur'] == true).length;
-        final aSigne = SharedController.to.signatureSuperviseur.value.isNotEmpty;
+        final aSigne = SharedController.to.signatureSuperviseur.value != null;
 
         return Column(
         children: [
@@ -304,20 +306,20 @@ class _ConfirmationSeancesScreenState
     final estRejete = f['statut'] == 'REJETE';
 
     return Container(
-      margin: EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -327,23 +329,23 @@ class _ConfirmationSeancesScreenState
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.blue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: Icon(Icons.person, color: Colors.blue, size: 22),
+                  child: const Icon(Icons.person, color: Colors.blue, size: 22),
                 ),
-                SizedBox(width: 12),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(f['matiere'],
-                          style: TextStyle(
+                          style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 15,
                               color: Color(0xFF003D29))),
-                      Text(f['enseignantNom'],
-                          style: TextStyle(
+                      Text(f['enseignantNom'] ?? 'Inconnu',
+                          style: const TextStyle(
                               color: Color(0xFF00855A),
                               fontSize: 12,
                               fontWeight: FontWeight.w500)),
@@ -353,11 +355,11 @@ class _ConfirmationSeancesScreenState
                 _buildStatutBadge(f['statut']),
               ],
             ),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             Container(
-              padding: EdgeInsets.all(10),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: Color(0xFFF5F7FA),
+                color: const Color(0xFFF5F7FA),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Column(
@@ -365,21 +367,21 @@ class _ConfirmationSeancesScreenState
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _buildDetailInfo(Icons.calendar_today, f['dateSeance']),
-                      _buildDetailInfo(Icons.access_time,
-                          '${f['heureDebut']} - ${f['heureFin']}'),
+                      Expanded(child: _buildDetailInfo(Icons.calendar_today, f['dateSeance'])),
+                      Expanded(child: _buildDetailInfo(Icons.access_time,
+                          '${f['heureDebut']} - ${f['heureFin']}')),
                       _buildDetailInfo(Icons.timer, '${f['duree']} min'),
                     ],
                   ),
                   if (f['contenu'] != null && f['contenu'].isNotEmpty) ...[
-                    SizedBox(height: 8),
-                    Divider(height: 1),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
+                    const Divider(height: 1),
+                    const SizedBox(height: 8),
                     Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(Icons.notes, size: 13, color: Colors.grey),
-                        SizedBox(width: 4),
+                        const Icon(Icons.notes, size: 13, color: Colors.grey),
+                        const SizedBox(width: 4),
                         Expanded(
                           child: Text(f['contenu'],
                               style: TextStyle(
@@ -472,19 +474,25 @@ class _ConfirmationSeancesScreenState
   Widget _buildStatBadge(String label, String valeur, Color couleur) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           children: [
-            Text(valeur,
-                style: TextStyle(
-                    color: couleur, fontSize: 18, fontWeight: FontWeight.bold)),
-            Text(label,
-                style: TextStyle(color: Colors.white70, fontSize: 10),
-                textAlign: TextAlign.center),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(valeur,
+                  style: TextStyle(
+                      color: couleur, fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label,
+                  style: const TextStyle(color: Colors.white70, fontSize: 10),
+                  textAlign: TextAlign.center),
+            ),
           ],
         ),
       ),

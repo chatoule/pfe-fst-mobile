@@ -1,104 +1,77 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:intl/intl.dart';
 import '../../controllers/auth_controller.dart';
+import '../../controllers/shared_controller.dart';
+import '../../services/export_service.dart';
 import 'confirmation_seances_screen.dart';
 
 class SuperviseurScreen extends StatefulWidget {
+  const SuperviseurScreen({super.key});
+
   @override
-  _SuperviseurScreenState createState() => _SuperviseurScreenState();
+  State<SuperviseurScreen> createState() => _SuperviseurScreenState();
 }
 
 class _SuperviseurScreenState extends State<SuperviseurScreen> {
   final AuthController _authController = Get.find<AuthController>();
+  final SharedController _sharedController = Get.find<SharedController>();
   int _currentIndex = 0;
+  DateTime? _startDate;
+  DateTime? _endDate;
 
-  final List<Map<String, dynamic>> pointages = [
-    {
-      'enseignant': 'Moussa Ali',
-      'matiere': 'Mathematiques',
-      'date': '2024-03-15',
-      'heure': '08h00 - 10h00',
-      'duree': 120,
-      'statut': 'EN_ATTENTE',
-      'couleur': Colors.blue,
-    },
-    {
-      'enseignant': 'Diallo Ibrahim',
-      'matiere': 'Physique',
-      'date': '2024-03-15',
-      'heure': '10h00 - 12h00',
-      'duree': 118,
-      'statut': 'EN_ATTENTE',
-      'couleur': Colors.purple,
-    },
-    {
-      'enseignant': 'Maiga Fatima',
-      'matiere': 'Chimie',
-      'date': '2024-03-14',
-      'heure': '14h00 - 16h00',
-      'duree': 115,
-      'statut': 'VALIDE',
-      'couleur': Color(0xFF00855A),
-    },
-  ];
-
-  final List<Map<String, dynamic>> presences = [
-    {'module': 'Mathematiques', 'total': 35, 'presents': 30, 'couleur': Colors.blue},
-    {'module': 'Physique', 'total': 35, 'presents': 28, 'couleur': Colors.purple},
-    {'module': 'Informatique', 'total': 35, 'presents': 33, 'couleur': Color(0xFF00855A)},
-    {'module': 'Chimie', 'total': 35, 'presents': 25, 'couleur': Colors.orange},
-  ];
-
-  final List<Map<String, dynamic>> historique = [
-    {
-      'action': 'Pointage valide',
-      'detail': 'Mathematiques - Moussa Ali',
-      'date': '2024-03-15 09:30',
-      'type': 'VALIDATION',
-    },
-    {
-      'action': 'Pointage rejete',
-      'detail': 'Chimie - Maiga Fatima',
-      'date': '2024-03-14 14:00',
-      'type': 'REJET',
-    },
-    {
-      'action': 'Presence consultee',
-      'detail': 'Module Physique',
-      'date': '2024-03-14 10:00',
-      'type': 'CONSULTATION',
-    },
-    {
-      'action': 'Pointage valide',
-      'detail': 'Informatique - Sani Ousseini',
-      'date': '2024-03-13 08:00',
-      'type': 'VALIDATION',
-    },
-  ];
+  Future<void> _selectDateRange(BuildContext context) async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2023),
+      lastDate: DateTime(2030),
+      initialDateRange: _startDate != null && _endDate != null
+          ? DateTimeRange(start: _startDate!, end: _endDate!)
+          : null,
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: const Color(0xFF00855A),
+              onPrimary: Colors.white,
+              onSurface: const Color(0xFF003D29),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+    if (picked != null) {
+      setState(() {
+        _startDate = picked.start;
+        _endDate = picked.end;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
         title: Text(_getTitre(),
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-        backgroundColor: Color(0xFF00855A),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+        backgroundColor: const Color(0xFF00855A),
         foregroundColor: Colors.white,
         elevation: 0,
         leading: Builder(
           builder: (context) => IconButton(
-            icon: Icon(Icons.menu, color: Colors.white),
+            icon: const Icon(Icons.menu, color: Colors.white),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.notifications_outlined),
+            icon: const Icon(Icons.notifications_outlined),
             onPressed: () {},
           ),
           IconButton(
-            icon: Icon(Icons.logout),
+            icon: const Icon(Icons.logout),
             onPressed: () => _authController.logout(),
           ),
         ],
@@ -114,8 +87,8 @@ class _SuperviseurScreenState extends State<SuperviseurScreen> {
         children: [
           Container(
             width: double.infinity,
-            padding: EdgeInsets.only(top: 50, bottom: 24, left: 20, right: 20),
-            decoration: BoxDecoration(
+            padding: const EdgeInsets.only(top: 50, bottom: 24, left: 20, right: 20),
+            decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
@@ -129,16 +102,22 @@ class _SuperviseurScreenState extends State<SuperviseurScreen> {
                   width: 65,
                   height: 65,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
                   ),
                   child: Obx(() {
                     final user = _authController.utilisateur.value;
+                    String initials = 'S';
+                    if (user != null) {
+                      String p = user.prenom.isNotEmpty ? user.prenom[0] : '';
+                      String n = user.nom.isNotEmpty ? user.nom[0] : '';
+                      initials = (p + n).isEmpty ? 'S' : (p + n).toUpperCase();
+                    }
                     return Center(
                       child: Text(
-                        user != null ? '${user.prenom[0]}${user.nom[0]}' : 'S',
-                        style: TextStyle(
+                        initials,
+                        style: const TextStyle(
                             color: Colors.white,
                             fontSize: 22,
                             fontWeight: FontWeight.bold),
@@ -146,52 +125,54 @@ class _SuperviseurScreenState extends State<SuperviseurScreen> {
                     );
                   }),
                 ),
-                SizedBox(height: 12),
+                const SizedBox(height: 12),
                 Obx(() => Text(
                   '${_authController.utilisateur.value?.prenom ?? ""} ${_authController.utilisateur.value?.nom ?? ""}',
-                  style: TextStyle(
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 16,
                       fontWeight: FontWeight.bold),
                 )),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Container(
-                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Text('SUPERVISEUR',
+                  child: const Text('SUPERVISEUR',
                       style: TextStyle(color: Colors.white, fontSize: 11)),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Obx(() => Text(
                   _authController.utilisateur.value?.email ?? '',
-                  style: TextStyle(color: Colors.white70, fontSize: 11),
+                  style: const TextStyle(color: Colors.white70, fontSize: 11),
                 )),
               ],
             ),
           ),
           Expanded(
-            child: Column(
+            child: ListView(
+              padding: EdgeInsets.zero,
               children: [
-                SizedBox(height: 8),
-                _buildDrawerItem(0, Icons.check_circle_outline, 'Valider Pointages'),
+                const SizedBox(height: 8),
+                _buildDrawerItem(0, Icons.dashboard_outlined, 'Dashboard'),
                 _buildDrawerItem(1, Icons.people_outline, 'Suivi Presences'),
                 _buildDrawerItem(2, Icons.bar_chart_outlined, 'Statistiques'),
-                _buildDrawerItem(3, Icons.fact_check_outlined, 'Confirmer Seances'),
-                _buildDrawerItem(4, Icons.history_outlined, 'Historique'),
+                _buildDrawerItem(3, Icons.history_outlined, 'Historique'),
+                _buildDrawerItem(4, Icons.check_circle_outline, 'Valider Seances'),
+                _buildDrawerItem(5, Icons.report_problem_outlined, 'Liste Rouge'),
               ],
             ),
           ),
-          Divider(height: 1),
+          const Divider(height: 1),
           ListTile(
-            leading: Icon(Icons.logout, color: Colors.red),
-            title: Text('Se deconnecter',
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Se deconnecter',
                 style: TextStyle(color: Colors.red, fontWeight: FontWeight.w500)),
             onTap: () => _authController.logout(),
           ),
-          Padding(
+          const Padding(
             padding: EdgeInsets.only(bottom: 16),
             child: Text('FST - UIN v1.0',
                 style: TextStyle(color: Colors.grey, fontSize: 11)),
@@ -204,17 +185,17 @@ class _SuperviseurScreenState extends State<SuperviseurScreen> {
   Widget _buildDrawerItem(int index, IconData icon, String label) {
     final isActive = _currentIndex == index;
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: isActive ? Color(0xFF00855A).withOpacity(0.1) : Colors.transparent,
+        color: isActive ? const Color(0xFF00855A).withValues(alpha: 0.1) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
       child: ListTile(
         leading: Icon(icon,
-            color: isActive ? Color(0xFF00855A) : Colors.grey[600], size: 22),
+            color: isActive ? const Color(0xFF00855A) : Colors.grey[600], size: 22),
         title: Text(label,
             style: TextStyle(
-                color: isActive ? Color(0xFF00855A) : Colors.grey[800],
+                color: isActive ? const Color(0xFF00855A) : Colors.grey[800],
                 fontWeight: isActive ? FontWeight.bold : FontWeight.normal,
                 fontSize: 14)),
         onTap: () {
@@ -227,532 +208,985 @@ class _SuperviseurScreenState extends State<SuperviseurScreen> {
 
   String _getTitre() {
     switch (_currentIndex) {
-      case 0: return 'Valider Pointages';
+      case 0: return 'Dashboard';
       case 1: return 'Suivi Presences';
       case 2: return 'Statistiques';
       case 3: return 'Historique';
+      case 4: return 'Valider Seances';
+      case 5: return 'Liste Rouge';
       default: return 'Superviseur';
     }
   }
 
   Widget _getScreen() {
+    return Column(
+      children: [
+        if (_currentIndex == 1 || _currentIndex == 2) _buildDeptFilter(),
+        if (_currentIndex == 3) _buildDateFilter(),
+        Expanded(
+          child: _getTabContent(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDateFilter() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Colors.white,
+      child: Row(
+        children: [
+          const Icon(Icons.date_range, size: 18, color: Color(0xFF00855A)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: InkWell(
+              onTap: () => _selectDateRange(context),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  _startDate == null 
+                    ? 'Filtrer par période' 
+                    : '${DateFormat('dd/MM/yyyy').format(_startDate!)} - ${DateFormat('dd/MM/yyyy').format(_endDate!)}',
+                  style: TextStyle(
+                    fontSize: 13, 
+                    color: _startDate == null ? Colors.grey[600] : const Color(0xFF003D29),
+                    fontWeight: _startDate == null ? FontWeight.normal : FontWeight.bold
+                  ),
+                ),
+              ),
+            ),
+          ),
+          if (_startDate != null)
+            IconButton(
+              icon: const Icon(Icons.clear, size: 18, color: Colors.red),
+              onPressed: () => setState(() {
+                _startDate = null;
+                _endDate = null;
+              }),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _getTabContent() {
     switch (_currentIndex) {
-      case 0: return _buildPointages();
+      case 0: return _buildDashboard();
       case 1: return _buildPresences();
       case 2: return _buildStatistiques();
       case 3: return _buildHistorique();
       case 4: return ConfirmationSeancesScreen();
-      default: return _buildPointages();
+      case 5: return _buildListeRouge();
+      default: return _buildDashboard();
     }
   }
 
-  // ===================== POINTAGES =====================
-  Widget _buildPointages() {
-    final enAttente = pointages.where((p) => p['statut'] == 'EN_ATTENTE').length;
-    final valides = pointages.where((p) => p['statut'] == 'VALIDE').length;
+  Widget _buildDashboard() {
+    return Obx(() {
+      final fiches = _sharedController.fichesPointage;
+      final enAttente = fiches.where((f) => f['confirmerSuperviseur'] == false && f['statut'] != 'REJETE').length;
+      final validees = fiches.where((f) => f['statut'] == 'VALIDE').length;
 
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF00855A), Color(0xFF003D29)],
-            ),
-          ),
-          child: Row(
-            children: [
-              _buildStatBadge('Total', '${pointages.length}', Colors.white),
-              SizedBox(width: 8),
-              _buildStatBadge('En attente', '$enAttente', Colors.orange),
-              SizedBox(width: 8),
-              _buildStatBadge('Valides', '$valides', Colors.greenAccent),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: EdgeInsets.all(16),
-            itemCount: pointages.length,
-            itemBuilder: (context, index) {
-              final p = pointages[index];
-              return Container(
-                margin: EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
+      return SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF00855A), Color(0xFF003D29)],
                 ),
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Bienvenue Mubarak,', style: TextStyle(color: Colors.white70, fontSize: 14)),
+                  const Text('Superviseur FST', style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: (p['couleur'] as Color).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(Icons.person,
-                                color: p['couleur'] as Color, size: 22),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(p['matiere'],
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 15,
-                                        color: Color(0xFF003D29))),
-                                Text(p['enseignant'],
-                                    style: TextStyle(
-                                        color: Color(0xFF00855A),
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w500)),
-                              ],
-                            ),
-                          ),
-                          _buildBadge(p['statut']),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      Container(
-                        padding: EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: Color(0xFFF5F7FA),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            _buildDetailInfo(Icons.calendar_today, p['date']),
-                            _buildDetailInfo(Icons.access_time, p['heure']),
-                            _buildDetailInfo(Icons.timer, '${p['duree']} min'),
-                          ],
-                        ),
-                      ),
-                      if (p['statut'] == 'EN_ATTENTE') ...[
-                        SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  setState(() => p['statut'] = 'VALIDE');
-                                  Get.snackbar('Succes', 'Pointage valide !',
-                                      snackPosition: SnackPosition.BOTTOM,
-                                      backgroundColor: Color(0xFF00855A),
-                                      colorText: Colors.white,
-                                      icon: Icon(Icons.check_circle, color: Colors.white));
-                                },
-                                icon: Icon(Icons.check, color: Colors.white, size: 16),
-                                label: Text('Valider',
-                                    style: TextStyle(color: Colors.white,
-                                        fontWeight: FontWeight.bold)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xFF00855A),
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
-                                ),
-                              ),
-                            ),
-                            SizedBox(width: 8),
-                            Expanded(
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  setState(() => p['statut'] = 'REJETE');
-                                  Get.snackbar('Info', 'Pointage rejete',
-                                      snackPosition: SnackPosition.BOTTOM,
-                                      backgroundColor: Colors.red,
-                                      colorText: Colors.white,
-                                      icon: Icon(Icons.cancel, color: Colors.white));
-                                },
-                                icon: Icon(Icons.close, color: Colors.white, size: 16),
-                                label: Text('Rejeter',
-                                    style: TextStyle(color: Colors.white,
-                                        fontWeight: FontWeight.bold)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red,
-                                  elevation: 0,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(10)),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                      _buildStatCard('Total', '${fiches.length}', Colors.white),
+                      const SizedBox(width: 8),
+                      _buildStatCard('A confirmer', '$enAttente', Colors.orange),
+                      const SizedBox(width: 8),
+                      _buildStatCard('Validées', '$validees', Colors.greenAccent),
                     ],
                   ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ===================== PRESENCES =====================
-  Widget _buildPresences() {
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF00855A), Color(0xFF003D29)],
-            ),
-          ),
-          child: Row(
-            children: [
-              _buildStatBadge('Modules', '${presences.length}', Colors.white),
-              SizedBox(width: 8),
-              _buildStatBadge('Taux moyen',
-                  '${presences.fold(0, (sum, p) => sum + ((p['presents'] as int) * 100 ~/ (p['total'] as int))) ~/ presences.length}%',
-                  Colors.greenAccent),
-              SizedBox(width: 8),
-              _buildStatBadge('Critiques',
-                  '${presences.where((p) => (p['presents'] as int) * 100 ~/ (p['total'] as int) < 75).length}',
-                  Colors.redAccent),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: EdgeInsets.all(16),
-            itemCount: presences.length,
-            itemBuilder: (context, index) {
-              final p = presences[index];
-              final taux = (p['presents'] as int) * 100 ~/ (p['total'] as int);
-              final couleur = taux >= 75 ? Color(0xFF00855A) : Colors.red;
-              return Container(
-                margin: EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: (p['couleur'] as Color).withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Icon(Icons.book,
-                                color: p['couleur'] as Color, size: 22),
-                          ),
-                          SizedBox(width: 12),
-                          Expanded(
-                            child: Text(p['module'],
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    color: Color(0xFF003D29))),
-                          ),
-                          Text('$taux%',
-                              style: TextStyle(
-                                  color: couleur,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 18)),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _buildMiniStat('Presents', p['presents'], Color(0xFF00855A)),
-                          _buildMiniStat('Absents',
-                              (p['total'] as int) - (p['presents'] as int), Colors.red),
-                          _buildMiniStat('Total', p['total'], Colors.blue),
-                        ],
-                      ),
-                      SizedBox(height: 10),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: (p['presents'] as int) / (p['total'] as int),
-                          backgroundColor: Colors.grey[200],
-                          color: couleur,
-                          minHeight: 8,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ===================== STATISTIQUES =====================
-  Widget _buildStatistiques() {
-    return SingleChildScrollView(
-      child: Column(
-        children: [
-          Container(
-            width: double.infinity,
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [Color(0xFF00855A), Color(0xFF003D29)],
+                ],
               ),
             ),
-            child: Column(
-              children: [
-                Text('Vue globale - FST UIN',
-                    style: TextStyle(color: Colors.white70, fontSize: 13)),
-                SizedBox(height: 16),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildGlobalStat('Total cours', '48'),
-                    _buildGlobalStat('Enseignants', '12'),
-                    _buildGlobalStat('Etudiants', '140'),
-                    _buildGlobalStat('Modules', '4'),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Taux de presence par module',
-                    style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF003D29))),
-                SizedBox(height: 12),
-                ...presences.map((p) {
-                  final taux = (p['presents'] as int) * 100 ~/ (p['total'] as int);
-                  final couleur = taux >= 75 ? Color(0xFF00855A) : Colors.red;
-                  return Container(
-                    margin: EdgeInsets.only(bottom: 12),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.06),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(14),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: (p['couleur'] as Color).withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(10),
-                                    ),
-                                    child: Icon(Icons.book,
-                                        color: p['couleur'] as Color, size: 20),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Text(p['module'],
-                                      style: TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 15,
-                                          color: Color(0xFF003D29))),
-                                ],
-                              ),
-                              Text('$taux%',
-                                  style: TextStyle(
-                                      color: couleur,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 20)),
-                            ],
-                          ),
-                          SizedBox(height: 8),
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(4),
-                            child: LinearProgressIndicator(
-                              value: (p['presents'] as int) / (p['total'] as int),
-                              backgroundColor: Colors.grey[200],
-                              color: couleur,
-                              minHeight: 8,
-                            ),
-                          ),
-                        ],
-                      ),
+            const SizedBox(height: 24),
+            const Text('Derniers Pointages', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            if (fiches.isEmpty)
+              const Center(child: Text('Aucun pointage enregistré'))
+            else
+              ListView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: fiches.length > 5 ? 5 : fiches.length,
+                itemBuilder: (context, index) {
+                  final f = fiches[fiches.length - 1 - index];
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: ListTile(
+                      leading: const CircleAvatar(backgroundColor: Color(0xFF00855A), child: Icon(Icons.person, color: Colors.white)),
+                      title: Text(f['matiere'], maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text(f['enseignantNom'] ?? 'Inconnu'),
+                      trailing: _buildStatutBadge(f['statut']),
                     ),
                   );
-                }).toList(),
-              ],
+                },
+              ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => setState(() => _currentIndex = 3),
+                child: const Text('Voir tout l\'historique'),
+              ),
+            )
+          ],
+        ),
+      );
+    });
+  }
+
+  Widget _buildStatCard(String label, String value, Color color) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.15),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          children: [
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.bold)),
             ),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10), textAlign: TextAlign.center),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeptFilter() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Colors.white,
+      child: Row(
+        children: [
+          const Text('Département:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Obx(() => Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _sharedController.selectedDepartement.value,
+                  isExpanded: true,
+                  icon: const Icon(Icons.filter_list, size: 20),
+                  items: _sharedController.departements.map((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value, style: const TextStyle(fontSize: 13)),
+                    );
+                  }).toList(),
+                  onChanged: (newValue) {
+                    _sharedController.selectedDepartement.value = newValue!;
+                  },
+                ),
+              ),
+            )),
           ),
         ],
       ),
     );
   }
 
-  // ===================== HISTORIQUE =====================
-  Widget _buildHistorique() {
-    return Column(
-      children: [
-        Container(
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF00855A), Color(0xFF003D29)],
+  // ===================== POINTAGES =====================
+  Widget _buildPointages() {
+    return Obx(() {
+      final pointages = _sharedController.fichesPointage
+          .where((f) => f['confirmerSuperviseur'] == false && f['statut'] != 'REJETE')
+          .toList();
+
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF00855A), Color(0xFF003D29)],
+              ),
+            ),
+            child: Row(
+              children: [
+                _buildStatBadge('Total', '${_sharedController.fichesPointage.length}', Colors.white),
+                const SizedBox(width: 8),
+                _buildStatBadge('En attente', '${pointages.length}', Colors.orange),
+                const SizedBox(width: 8),
+                _buildStatBadge('Confirmés',
+                  '${_sharedController.fichesPointage.where((f) => f['confirmerSuperviseur'] == true).length}', 
+                  Colors.greenAccent),
+              ],
             ),
           ),
-          child: Row(
-            children: [
-              _buildStatBadge('Total', '${historique.length}', Colors.white),
-              SizedBox(width: 8),
-              _buildStatBadge('Validations',
-                  '${historique.where((h) => h['type'] == 'VALIDATION').length}',
-                  Colors.greenAccent),
-              SizedBox(width: 8),
-              _buildStatBadge('Rejets',
-                  '${historique.where((h) => h['type'] == 'REJET').length}',
-                  Colors.redAccent),
-            ],
-          ),
-        ),
-        Expanded(
-          child: ListView.builder(
-            padding: EdgeInsets.all(16),
-            itemCount: historique.length,
-            itemBuilder: (context, index) {
-              final h = historique[index];
-              Color couleur;
-              IconData icon;
-              switch (h['type']) {
-                case 'VALIDATION':
-                  couleur = Color(0xFF00855A);
-                  icon = Icons.check_circle;
-                  break;
-                case 'REJET':
-                  couleur = Colors.red;
-                  icon = Icons.cancel;
-                  break;
-                default:
-                  couleur = Colors.blue;
-                  icon = Icons.visibility;
-              }
-              return Container(
-                margin: EdgeInsets.only(bottom: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.06),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: ListTile(
-                  contentPadding: EdgeInsets.symmetric(
-                      horizontal: 16, vertical: 8),
-                  leading: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: couleur.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(icon, color: couleur, size: 22),
-                  ),
-                  title: Text(h['action'],
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Color(0xFF003D29))),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 2),
-                      Text(h['detail'],
-                          style: TextStyle(
-                              color: Color(0xFF00855A),
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500)),
-                      SizedBox(height: 2),
-                      Row(
-                        children: [
-                          Icon(Icons.access_time, size: 11, color: Colors.grey),
-                          SizedBox(width: 3),
-                          Text(h['date'],
-                              style: TextStyle(color: Colors.grey, fontSize: 11)),
-                        ],
+          Expanded(
+            child: pointages.isEmpty 
+            ? const Center(child: Text('Aucun pointage en attente de confirmation'))
+            : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: pointages.length,
+              itemBuilder: (context, index) {
+                final p = pointages[index];
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
                     ],
                   ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF00855A).withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: const Icon(Icons.person,
+                                  color: Color(0xFF00855A), size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(p['matiere'],
+                                      style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                          color: Color(0xFF003D29)),
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis),
+                                  Text(p['enseignantNom'] ?? 'Inconnu',
+                                      style: const TextStyle(
+                                          color: Color(0xFF00855A),
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis),
+                                ],
+                              ),
+                            ),
+                            _buildStatutBadge(p['statut']),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF5F7FA),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              Expanded(child: _buildDetailInfo(Icons.calendar_today, p['dateSeance'])),
+                              Expanded(child: _buildDetailInfo(Icons.access_time, '${p['heureDebut']} - ${p['heureFin']}')),
+                              _buildDetailInfo(Icons.timer, '${p['duree']} min'),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: () => _showDetailsDialog(context, p),
+                                style: OutlinedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  foregroundColor: const Color(0xFF00855A),
+                                  side: const BorderSide(color: Color(0xFF00855A)),
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: const FittedBox(child: Text('Détails')),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () => _sharedController.confirmerParSuperviseur(p['id']),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  backgroundColor: const Color(0xFF00855A),
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: const FittedBox(child: Text('Confirmer', style: TextStyle(color: Colors.white))),
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: () => _sharedController.rejeterFiche(p['id'], 'Superviseur'),
+                                style: ElevatedButton.styleFrom(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  backgroundColor: Colors.red,
+                                  elevation: 0,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10)),
+                                ),
+                                child: const FittedBox(child: Text('Rejeter', style: TextStyle(color: Colors.white))),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  void _showDetailsDialog(BuildContext context, Map<String, dynamic> p) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            const Icon(Icons.description, color: Color(0xFF00855A)),
+            const SizedBox(width: 10),
+            Expanded(child: Text(p['matiere'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildDetailItemPopup('Enseignant', p['enseignantNom'] ?? 'Inconnu'),
+              _buildDetailItemPopup('Date', p['dateSeance']),
+              _buildDetailItemPopup('Horaire', '${p['heureDebut']} - ${p['heureFin']}'),
+              _buildDetailItemPopup('Durée', '${p['duree']} min'),
+              const Divider(),
+              const Text('Contenu du cours :', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF003D29), fontSize: 14)),
+              const SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  borderRadius: BorderRadius.circular(10),
                 ),
-              );
-            },
+                child: Text(p['contenu'] ?? 'Aucun contenu renseigné', style: const TextStyle(fontSize: 13)),
+              ),
+              const SizedBox(height: 16),
+              const Text('Signature Enseignant :', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF003D29), fontSize: 14)),
+              const SizedBox(height: 8),
+              p['signatureEnseignant'] != null
+                  ? Container(
+                      height: 100,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.grey[300]!),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Image.memory(p['signatureEnseignant'], fit: BoxFit.contain),
+                    )
+                  : const Text('Aucune signature', style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey, fontSize: 12)),
+            ],
           ),
         ),
-      ],
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              _sharedController.confirmerParSuperviseur(p['id']);
+              Navigator.pop(context);
+              Get.snackbar('Succès', 'Pointage confirmé avec succès',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: const Color(0xFF00855A),
+                  colorText: Colors.white);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF00855A),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Confirmer maintenant', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
+  }
+
+  Widget _buildDetailItemPopup(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label : ', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.grey)),
+          Expanded(child: Text(value, style: const TextStyle(fontSize: 13, color: Color(0xFF003D29)))),
+        ],
+      ),
+    );
+  }
+
+  // ===================== PRESENCES =====================
+  Widget _buildPresences() {
+    return Obx(() {
+      final allCours = _sharedController.coursDuJour;
+      final selectedDept = _sharedController.selectedDepartement.value;
+      
+      final cours = selectedDept == 'Tous les départements' 
+          ? allCours 
+          : allCours.where((c) => c['departement'] == selectedDept).toList();
+
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF00855A), Color(0xFF003D29)],
+              ),
+            ),
+            child: Row(
+              children: [
+                _buildStatBadge('Modules', '${cours.length}', Colors.white),
+                const SizedBox(width: 8),
+                _buildStatBadge('Taux moyen',
+                    '${cours.isEmpty ? 0 : (cours.fold<int>(0, (sum, c) => sum + ((c['presents'] as int) * 100 ~/ (c['total'] as int))) ~/ cours.length)}%',
+                    Colors.greenAccent),
+                const SizedBox(width: 8),
+                _buildStatBadge('Critiques',
+                    '${cours.where((c) => ((c['presents'] as int) * 100 ~/ (c['total'] as int)) < 75).length}',
+                    Colors.redAccent),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: cours.length,
+              itemBuilder: (context, index) {
+                final c = cours[index];
+                final taux = (c['presents'] as int) * 100 ~/ (c['total'] as int);
+                final couleur = taux >= 75 ? const Color(0xFF00855A) : Colors.red;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                color: couleur.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(Icons.book,
+                                  color: couleur, size: 22),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(c['matiere'],
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color(0xFF003D29)),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis),
+                            ),
+                            Text('$taux%',
+                                style: TextStyle(
+                                    color: couleur,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 18)),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _buildMiniStat('Presents', c['presents'], const Color(0xFF00855A)),
+                            _buildMiniStat('Absents',
+                                (c['total'] as int) - (c['presents'] as int), Colors.red),
+                            _buildMiniStat('Total', c['total'], Colors.blue),
+                          ],
+                        ),
+                        const SizedBox(height: 10),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: (c['presents'] as int) / (c['total'] as int),
+                            backgroundColor: Colors.grey[200],
+                            color: couleur,
+                            minHeight: 8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  // ===================== STATISTIQUES =====================
+  Widget _buildStatistiques() {
+    return Obx(() {
+      final allStats = _sharedController.statistiquesMatieres;
+      final selectedDept = _sharedController.selectedDepartement.value;
+      
+      // Note: In a real app, stats would also be filtered by dept in the controller
+      final stats = allStats; 
+
+      return SingleChildScrollView(
+        child: Column(
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF00855A), Color(0xFF003D29)],
+                ),
+              ),
+              child: Column(
+                children: [
+                  const Text('Vue globale - FST UIN',
+                      style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  const SizedBox(height: 16),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    children: [
+                      _buildGlobalStat('Séances', '${_sharedController.totalSeances}'),
+                      _buildGlobalStat('Validées', '${_sharedController.seancesValidees}'),
+                      _buildGlobalStat('Attente', '${_sharedController.seancesEnAttente}'),
+                      _buildGlobalStat('Sém.', 'S1'),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Taux de présence par module',
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF003D29))),
+                  const SizedBox(height: 12),
+                  ...stats.map((s) {
+                    final taux = s['tauxPresence'] as int;
+                    final couleur = taux >= 75 ? const Color(0xFF00855A) : Colors.red;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Row(
+                                  children: [
+                                    Container(
+                                      width: 40,
+                                      height: 40,
+                                      decoration: BoxDecoration(
+                                        color: couleur.withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      child: Icon(Icons.book,
+                                          color: couleur, size: 20),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(s['matiere'],
+                                          style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: Color(0xFF003D29)),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis),
+                                    ),
+                                  ],
+                                ),
+                                Text('$taux%',
+                                    style: TextStyle(
+                                        color: couleur,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20)),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(4),
+                              child: LinearProgressIndicator(
+                                value: taux / 100,
+                                backgroundColor: Colors.grey[200],
+                                color: couleur,
+                                minHeight: 8,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  // ===================== HISTORIQUE =====================
+  Widget _buildHistorique() {
+    return Obx(() {
+      final pointages = _sharedController.fichesPointage.where((f) {
+        final isCorrectStatut = f['confirmerSuperviseur'] == true || f['statut'] == 'REJETE';
+        if (!isCorrectStatut) return false;
+
+        if (_startDate != null && _endDate != null) {
+          try {
+            final dateSeance = DateTime.parse(f['dateSeance']);
+            return dateSeance.isAfter(_startDate!.subtract(const Duration(days: 1))) &&
+                dateSeance.isBefore(_endDate!.add(const Duration(days: 1)));
+          } catch (e) {
+            return true;
+          }
+        }
+        return true;
+      }).toList();
+
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF00855A), Color(0xFF003D29)],
+              ),
+            ),
+            child: Row(
+              children: [
+                _buildStatBadge('Total', '${pointages.length}', Colors.white),
+                const SizedBox(width: 8),
+                _buildStatBadge('Validés',
+                    '${pointages.where((h) => h['statut'] != 'REJETE').length}',
+                    Colors.greenAccent),
+                const SizedBox(width: 8),
+                _buildStatBadge('Rejetés',
+                    '${pointages.where((h) => h['statut'] == 'REJETE').length}',
+                    Colors.redAccent),
+              ],
+            ),
+          ),
+          Expanded(
+            child: pointages.isEmpty 
+            ? const Center(child: Text('Aucun historique disponible'))
+            : ListView.builder(
+              padding: const EdgeInsets.all(16),
+              itemCount: pointages.length,
+              itemBuilder: (context, index) {
+                final h = pointages[index];
+                Color couleur;
+                IconData icon;
+                if (h['statut'] == 'REJETE') {
+                  couleur = Colors.red;
+                  icon = Icons.cancel;
+                } else {
+                  couleur = const Color(0xFF00855A);
+                  icon = Icons.check_circle;
+                }
+                
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.06),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ListTile(
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16, vertical: 8),
+                    leading: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: couleur.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(icon, color: couleur, size: 22),
+                    ),
+                    title: Text(h['statut'] == 'REJETE' ? 'Pointage Rejeté' : 'Pointage Confirmé',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Color(0xFF003D29))),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 2),
+                        Text('${h['matiere']} - ${h['enseignantNom']}',
+                            style: const TextStyle(
+                                color: Color(0xFF00855A),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500)),
+                        const SizedBox(height: 2),
+                        Row(
+                          children: [
+                            const Icon(Icons.access_time, size: 11, color: Colors.grey),
+                            const SizedBox(width: 3),
+                            Text(h['dateSeance'],
+                                style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      );
+    });
+  }
+
+  // ===================== LISTE ROUGE =====================
+  Widget _buildListeRouge() {
+    return Obx(() {
+      final etudiants = _sharedController.etudiantsEnSession;
+
+      return Column(
+        children: [
+          // En-tête Institutionnel
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(bottom: BorderSide(color: Color(0xFFEEEEEE))),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Image.asset('assets/images/logo_uin.png', width: 45, height: 45),
+                const SizedBox(width: 12),
+                const Column(
+                  children: [
+                    Text('UNIVERSITE ISLAMIQUE AU NIGER',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF003D29))),
+                    Text('FACULTE DES SCIENCES ET TECHNIQUES',
+                        style: TextStyle(fontSize: 11, color: Color(0xFF00855A))),
+                  ],
+                ),
+              ],
+            ),
+          ),
+
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFFB71C1C), Color(0xFF7F0000)],
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('SESSION DE RATTRAPAGE',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    Text('${etudiants.length} Étudiants concernés',
+                        style: const TextStyle(color: Colors.white70, fontSize: 12)),
+                  ],
+                ),
+                ElevatedButton.icon(
+                  onPressed: etudiants.isEmpty ? null : () async {
+                    await ExportService.exporterListeRougePDF(
+                      etudiants,
+                      signature: _sharedController.signatureChefDep.value,
+                    );
+                  },
+                  icon: const Icon(Icons.picture_as_pdf, size: 18),
+                  label: const Text('Exporter'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.red[900],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: etudiants.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_outline, size: 64, color: Colors.green[200]),
+                        const SizedBox(height: 16),
+                        const Text('Aucun étudiant sur la liste rouge',
+                            style: TextStyle(color: Colors.grey, fontSize: 16)),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: etudiants.length,
+                    itemBuilder: (context, index) {
+                      final e = etudiants[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                          border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
+                        ),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          leading: CircleAvatar(
+                            backgroundColor: Colors.red[50],
+                            child: Text('${e['prenom'][0]}${e['nom'][0]}',
+                                style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+                          ),
+                          title: Text('${e['prenom']} ${e['nom']}',
+                              style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF003D29))),
+                          subtitle: Text('ID: ${e['id']} • ${e['absences']} absences NJ',
+                              style: TextStyle(color: Colors.red[700], fontWeight: FontWeight.w500)),
+                          trailing: const Icon(Icons.warning_amber_rounded, color: Colors.red),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      );
+    });
   }
 
   // ===================== WIDGETS COMMUNS =====================
   Widget _buildStatBadge(String label, String valeur, Color couleur) {
     return Expanded(
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: 10),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(
           children: [
-            Text(valeur,
-                style: TextStyle(
-                    color: couleur,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold)),
-            Text(label,
-                style: TextStyle(color: Colors.white70, fontSize: 10),
-                textAlign: TextAlign.center),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(valeur,
+                  style: TextStyle(
+                      color: couleur,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold)),
+            ),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Text(label,
+                  style: const TextStyle(color: Colors.white70, fontSize: 10),
+                  textAlign: TextAlign.center),
+            ),
           ],
         ),
       ),
@@ -760,16 +1194,24 @@ class _SuperviseurScreenState extends State<SuperviseurScreen> {
   }
 
   Widget _buildGlobalStat(String label, String valeur) {
-    return Column(
-      children: [
-        Text(valeur,
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold)),
-        Text(label,
-            style: TextStyle(color: Colors.white70, fontSize: 11)),
-      ],
+    return Expanded(
+      child: Column(
+        children: [
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(valeur,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold)),
+          ),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(label,
+                style: const TextStyle(color: Colors.white70, fontSize: 11)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -788,25 +1230,27 @@ class _SuperviseurScreenState extends State<SuperviseurScreen> {
     return Row(
       children: [
         Icon(icon, size: 13, color: Colors.grey),
-        SizedBox(width: 4),
+        const SizedBox(width: 4),
         Text(valeur, style: TextStyle(color: Colors.grey[600], fontSize: 12)),
       ],
     );
   }
 
-  Widget _buildBadge(String statut) {
+  Widget _buildStatutBadge(String statut) {
     Color couleur;
     switch (statut) {
-      case 'VALIDE': couleur = Color(0xFF00855A); break;
+      case 'VALIDE':
+      case 'CONFIRME': 
+        couleur = const Color(0xFF00855A); break;
       case 'REJETE': couleur = Colors.red; break;
       default: couleur = Colors.orange;
     }
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: couleur.withOpacity(0.1),
+        color: couleur.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: couleur.withOpacity(0.3)),
+        border: Border.all(color: couleur.withValues(alpha: 0.3)),
       ),
       child: Text(statut,
           style: TextStyle(

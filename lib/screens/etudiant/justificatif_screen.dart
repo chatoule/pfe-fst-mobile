@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
+import '../../controllers/shared_controller.dart';
 
 class JustificatifScreen extends StatefulWidget {
   final int presenceId;
@@ -280,13 +281,12 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
 
     Future.delayed(Duration(seconds: 2), () {
       Get.back();
-      Get.snackbar(
-        'Succes !',
-        'Justificatif soumis avec succes',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Color(0xFF00855A),
-        colorText: Colors.white,
-        icon: Icon(Icons.check_circle, color: Colors.white),
+      // Ajouter cette ligne pour mettre à jour les données partagées
+      SharedController.to.soumettreJustificatif(
+        widget.presenceId,
+        _typeSelectionne ?? '',
+        _motifController.text.trim(),
+        'justificatif_${widget.presenceId}.pdf',
       );
       Get.back();
     });
