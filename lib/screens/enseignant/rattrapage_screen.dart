@@ -242,12 +242,19 @@ class RattrapagesScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
+        scrollable: true,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Row(
           children: [
             Icon(Icons.replay, color: Color(0xFF00855A)),
             SizedBox(width: 8),
-            Text('Demander un rattrapage'),
+            Expanded(
+              child: Text(
+                'Demander un rattrapage',
+                style: TextStyle(fontSize: 18),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
           ],
         ),
         content: SingleChildScrollView(
@@ -275,20 +282,37 @@ class RattrapagesScreen extends StatelessWidget {
           ElevatedButton(
             onPressed: () {
               if (matiereController.text.isNotEmpty) {
+                // Envoyer la demande au contrôleur
                 controller.ajouterRattrapage(
                   matiereController.text,
                   dateController.text.isEmpty ? 'Aujourd\'hui' : dateController.text,
                   heureController.text.isEmpty ? 'Non spécifié' : heureController.text,
                   'A définir',
                 );
-                Get.back();
-                Get.snackbar('Demande Envoyée',
-                    'Votre demande a été ajoutée et transmise pour validation.',
-                    snackPosition: SnackPosition.BOTTOM,
-                    backgroundColor: Color(0xFF00855A),
-                    colorText: Colors.white,
-                    duration: Duration(seconds: 4),
-                    icon: Icon(Icons.send, color: Colors.white));
+
+                // Fermer le dialogue
+                Navigator.of(context).pop();
+
+                // Notification de succès
+                Get.snackbar(
+                  'Demande Envoyée',
+                  'Votre demande de rattrapage pour ${matiereController.text} a été transmise.',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Color(0xFF00855A),
+                  colorText: Colors.white,
+                  duration: Duration(seconds: 4),
+                  icon: Icon(Icons.send, color: Colors.white),
+                  margin: EdgeInsets.all(15),
+                );
+              } else {
+                // Feedback si la matière est vide
+                Get.snackbar(
+                  'Champ requis',
+                  'Veuillez au moins renseigner la matière.',
+                  snackPosition: SnackPosition.BOTTOM,
+                  backgroundColor: Colors.orange,
+                  colorText: Colors.white,
+                );
               }
             },
             style: ElevatedButton.styleFrom(

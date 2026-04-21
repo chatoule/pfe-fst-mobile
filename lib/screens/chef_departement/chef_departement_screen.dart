@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
+import 'dart:io';
 import 'package:get/get.dart';
 import 'package:signature/signature.dart';
 import '../../controllers/auth_controller.dart';
 import 'validation_seances_screen.dart';
 import 'etat_vacation_screen.dart';
+import '../../models/presence_model.dart';
 import '../../controllers/shared_controller.dart';
 import '../../services/export_service.dart';
 
@@ -28,6 +30,96 @@ class _ChefDepartementScreenState extends State<ChefDepartementScreen> {
     exportBackgroundColor: Colors.transparent,
   );
   bool _hasSigned = false;
+
+  void _showImageDialog(String path) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(
+                File(path),
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    padding: const EdgeInsets.all(20),
+                    color: Colors.white,
+                    child: Column(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                        const SizedBox(height: 16),
+                        Text("Impossible d'afficher l'image: $path"),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showPdfMockDialog(String path) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.picture_as_pdf, color: Colors.red),
+            const SizedBox(width: 10),
+            const Text("Pièce jointe PDF"),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text("Simulation de l'ouverture du fichier :"),
+            const SizedBox(height: 8),
+            Text(path, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.blue)),
+            const SizedBox(height: 16),
+            const Text("Dans une version réelle, nous utiliserions un package comme 'flutter_pdfview' ou ouvririons le fichier avec le système."),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Fermer"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _voirPieceJointe(PresenceModel j) {
+    if (j.justificatifUrl == null || j.justificatifUrl!.isEmpty) {
+      Get.snackbar("Info", "Aucune pièce jointe disponible", backgroundColor: Colors.blue, colorText: Colors.white);
+      return;
+    }
+
+    final path = j.justificatifUrl!.toLowerCase();
+    if (path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.png')) {
+      _showImageDialog(j.justificatifUrl!);
+    } else {
+      _showPdfMockDialog(j.justificatifUrl!);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -134,6 +226,7 @@ class _ChefDepartementScreenState extends State<ChefDepartementScreen> {
                 _buildDrawerItem(1, Icons.people_outline, 'Suivi Presences'),
                 _buildDrawerItem(8, Icons.person_add_outlined, 'Gestion Utilisateurs'),
                 _buildDrawerItem(2, Icons.check_circle_outline, 'Valider Pointages'),
+                _buildDrawerItem(9, Icons.replay_outlined, 'Valider Rattrapages'),
                 _buildDrawerItem(6, Icons.description_outlined, 'Justificatifs'),
                 _buildDrawerItem(7, Icons.gavel_outlined, 'Liste Rouge (Session)'),
                 _buildDrawerItem(3, Icons.bar_chart_outlined, 'Rapports'),
@@ -193,6 +286,7 @@ class _ChefDepartementScreenState extends State<ChefDepartementScreen> {
       case 6: return 'Justificatifs Absences';
       case 7: return 'Liste Rouge - Session';
       case 8: return 'Gestion Utilisateurs';
+      case 9: return 'Validation Rattrapages';
       default: return 'Chef Departement';
     }
   }
@@ -208,8 +302,148 @@ class _ChefDepartementScreenState extends State<ChefDepartementScreen> {
       case 6: return _buildJustificatifsView();
       case 7: return _buildListeRouge();
       case 8: return _buildGestionUtilisateurs();
+      case 9: return _buildRattrapagesValidation();
       default: return _buildTableauBord();
     }
+  }
+
+  // ===================== VALIDATION RATTRAPAGES =====================
+  Widget _buildRattrapagesValidation() {
+    return Obx(() {
+      final rattrapages = _sharedController.rattrapages
+          .where((r) => r['statut'] == 'EN_ATTENTE')
+          .toList();
+
+      return Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF00855A), Color(0xFF003D29)],
+              ),
+            ),
+            child: Row(
+              children: [
+                _buildStatBadge('En attente', '${rattrapages.length}', Colors.orange),
+                const SizedBox(width: 8),
+                _buildStatBadge('Total', '${_sharedController.rattrapages.length}', Colors.white),
+              ],
+            ),
+          ),
+          Expanded(
+            child: rattrapages.isEmpty
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.done_all, size: 60, color: Colors.green),
+                        SizedBox(height: 16),
+                        Text('Tous les rattrapages ont été traités',
+                            style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                  )
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: rattrapages.length,
+                    itemBuilder: (context, index) {
+                      final r = rattrapages[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: Colors.orange.withValues(alpha: 0.1),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: const Icon(Icons.replay,
+                                        color: Colors.orange, size: 22),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(r['matiere'] ?? 'Inconnu',
+                                            style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 14,
+                                                color: Color(0xFF003D29))),
+                                        Text(
+                                            '${r['date']} • ${r['heure']}',
+                                            style: const TextStyle(
+                                                color: Color(0xFF00855A),
+                                                fontSize: 12,
+                                                fontWeight: FontWeight.w500)),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 12),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () => _sharedController
+                                          .validerRattrapage(r['id']!),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF00855A),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10)),
+                                      ),
+                                      child: const Text('Valider',
+                                          style: TextStyle(color: Colors.white)),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                    child: ElevatedButton(
+                                      onPressed: () => _sharedController
+                                          .rejeterRattrapage(r['id']!),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10)),
+                                      ),
+                                      child: const Text('Rejeter',
+                                          style: TextStyle(color: Colors.white)),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+          ),
+        ],
+      );
+    });
   }
 
   // ===================== GESTION UTILISATEURS =====================
@@ -806,6 +1040,42 @@ class _ChefDepartementScreenState extends State<ChefDepartementScreen> {
                           ),
                         ),
                         const SizedBox(height: 12),
+                        if (j.justificatifUrl != null)
+                          Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: InkWell(
+                              onTap: () => _voirPieceJointe(j),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.blue.withValues(alpha: 0.05),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(
+                                      j.justificatifUrl!.toLowerCase().endsWith('.pdf') 
+                                          ? Icons.picture_as_pdf 
+                                          : Icons.image,
+                                      size: 16,
+                                      color: Colors.blue,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    const Text(
+                                      "Voir la pièce jointe",
+                                      style: TextStyle(
+                                        color: Colors.blue,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
                         Row(
                           children: [
                             Expanded(

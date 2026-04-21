@@ -843,75 +843,84 @@ class _SuperviseurScreenState extends State<SuperviseurScreen> {
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF003D29))),
                   const SizedBox(height: 12),
-                  ...stats.map((s) {
-                    final taux = s['tauxPresence'] as int;
-                    final couleur = taux >= 75 ? const Color(0xFF00855A) : Colors.red;
-                    return Container(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.06),
-                            blurRadius: 10,
-                            offset: const Offset(0, 4),
+                  SizedBox(
+                    height: 400, // Hauteur fixe pour éviter les erreurs RenderBox
+                    child: ListView.builder(
+                      shrinkWrap: true,
+                      itemCount: stats.length,
+                      itemBuilder: (context, index) {
+                        final s = stats[index];
+                        final taux = s['tauxPresence'] as int;
+                        final couleur = taux >= 75 ? const Color(0xFF00855A) : Colors.red;
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.06),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Padding(
+                            padding: const EdgeInsets.all(14),
+                            child: Column(
                               children: [
                                 Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: couleur.withValues(alpha: 0.1),
-                                        borderRadius: BorderRadius.circular(10),
-                                      ),
-                                      child: Icon(Icons.book,
-                                          color: couleur, size: 20),
+                                    Row(
+                                      children: [
+                                        Container(
+                                          width: 40,
+                                          height: 40,
+                                          decoration: BoxDecoration(
+                                            color: couleur.withValues(alpha: 0.1),
+                                            borderRadius: BorderRadius.circular(10),
+                                          ),
+                                          child: Icon(Icons.book,
+                                              color: couleur, size: 20),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        SizedBox(
+                                          width: MediaQuery.of(context).size.width * 0.4,
+                                          child: Text(s['matiere'],
+                                              style: const TextStyle(
+                                                  fontWeight: FontWeight.bold,
+                                                  fontSize: 14,
+                                                  color: Color(0xFF003D29)),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis),
+                                        ),
+                                      ],
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(s['matiere'],
-                                          style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                              color: Color(0xFF003D29)),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis),
-                                    ),
+                                    Text('$taux%',
+                                        style: TextStyle(
+                                            color: couleur,
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 20)),
                                   ],
                                 ),
-                                Text('$taux%',
-                                    style: TextStyle(
-                                        color: couleur,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20)),
+                                const SizedBox(height: 8),
+                                ClipRRect(
+                                  borderRadius: BorderRadius.circular(4),
+                                  child: LinearProgressIndicator(
+                                    value: taux / 100,
+                                    backgroundColor: Colors.grey[200],
+                                    color: couleur,
+                                    minHeight: 8,
+                                  ),
+                                ),
                               ],
                             ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(4),
-                              child: LinearProgressIndicator(
-                                value: taux / 100,
-                                backgroundColor: Colors.grey[200],
-                                color: couleur,
-                                minHeight: 8,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ],
               ),
             ),

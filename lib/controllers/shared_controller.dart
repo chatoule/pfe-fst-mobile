@@ -19,6 +19,7 @@ class SharedController extends GetxController {
   // ===== RATTRAPAGES =====
   var rattrapages = <Map<String, String>>[
     {
+      'id': '1',
       'matiere': 'Mathematiques',
       'date': '2024-03-20',
       'heure': '08h00 - 10h00',
@@ -26,6 +27,7 @@ class SharedController extends GetxController {
       'statut': 'EN_ATTENTE',
     },
     {
+      'id': '2',
       'matiere': 'Physique',
       'date': '2024-03-22',
       'heure': '10h00 - 12h00',
@@ -33,11 +35,36 @@ class SharedController extends GetxController {
       'statut': 'VALIDE',
     },
     {
+      'id': '3',
       'matiere': 'Chimie',
       'date': '2024-03-25',
       'heure': '14h00 - 16h00',
       'salle': 'C303',
       'statut': 'REJETE',
+    },
+  ].obs;
+
+  // ===== SUPPORTS DE COURS =====
+  var supportsDeCours = <Map<String, dynamic>>[
+    {
+      'id': '1',
+      'titre': 'Cours Chapitre 1 - Introduction',
+      'matiere': 'Informatique',
+      'type': 'PDF',
+      'date': '2024-03-10',
+      'taille': '2.4 MB',
+      'icon': Icons.picture_as_pdf,
+      'couleur': Colors.red,
+    },
+    {
+      'id': '2',
+      'titre': 'TD Exercices Chapitre 2',
+      'matiere': 'Mathematiques',
+      'type': 'WORD',
+      'date': '2024-03-12',
+      'taille': '1.1 MB',
+      'icon': Icons.description,
+      'couleur': Colors.blue,
     },
   ].obs;
 
@@ -156,7 +183,24 @@ class SharedController extends GetxController {
     final noms = ['Moussa', 'Abdoulaye', 'Fatimata', 'Ibrahim', 'Zainab'];
     final prenoms = ['Adamou', 'Oumarou', 'Sani', 'Ali', 'Issoufou'];
 
-    for (int i = 0; i < 50; i++) {
+    // S'assurer que l'étudiant de test (ID 2) a des absences
+    for (int i = 0; i < 5; i++) {
+       presences.add(PresenceModel(
+        id: i + 1,
+        etudiantId: 2,
+        nomEtudiant: 'Moussa',
+        prenomEtudiant: 'Adamou',
+        coursId: i + 1,
+        dateSeance: '2024-04-0${i+1}',
+        matiere: matieres[i % matieres.length],
+        estPresent: false,
+        statutJustification: i == 0 ? 'EN_ATTENTE' : null,
+        motifJustificatif: i == 0 ? 'Raison médicale' : null,
+        typeJustificatif: 'Certificat médical',
+      ));
+    }
+
+    for (int i = 5; i < 50; i++) {
       final etudiantId = 100 + (i % 5);
       final matiere = matieres[i % matieres.length];
       final estPresent = (i % 7) != 0; // Quelques absences
@@ -226,6 +270,10 @@ class SharedController extends GetxController {
         dateSeance: dateSeance,
         matiere: matiere,
         estPresent: estPresent,
+        justificatifUrl: index != -1 ? presences[index].justificatifUrl : null,
+        motifJustificatif: index != -1 ? presences[index].motifJustificatif : null,
+        typeJustificatif: index != -1 ? presences[index].typeJustificatif : null,
+        statutJustification: index != -1 ? presences[index].statutJustification : null,
       );
     } else {
       presences.add(PresenceModel(
@@ -293,6 +341,7 @@ class SharedController extends GetxController {
 
   void ajouterRattrapage(String matiere, String date, String heure, String salle) {
     rattrapages.add({
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
       'matiere': matiere,
       'date': date,
       'heure': heure,
@@ -300,6 +349,52 @@ class SharedController extends GetxController {
       'statut': 'EN_ATTENTE',
     });
     rattrapages.refresh();
+  }
+
+  void validerRattrapage(String id) {
+    final index = rattrapages.indexWhere((r) => r['id'] == id);
+    if (index != -1) {
+      var r = Map<String, String>.from(rattrapages[index]);
+      r['statut'] = 'VALIDE';
+      rattrapages[index] = r;
+      rattrapages.refresh();
+    }
+  }
+
+  void rejeterRattrapage(String id) {
+    final index = rattrapages.indexWhere((r) => r['id'] == id);
+    if (index != -1) {
+      var r = Map<String, String>.from(rattrapages[index]);
+      r['statut'] = 'REJETE';
+      rattrapages[index] = r;
+      rattrapages.refresh();
+    }
+  }
+
+  // ===== METHODES SUPPORTS =====
+  void ajouterSupport(String titre, String matiere, String type, String taille) {
+    supportsDeCours.add({
+      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+      'titre': titre,
+      'matiere': matiere,
+      'type': type.toUpperCase(),
+      'date': DateTime.now().toString().split(' ')[0],
+      'taille': taille,
+      'icon': type.toUpperCase() == 'PDF' ? Icons.picture_as_pdf : Icons.description,
+      'couleur': type.toUpperCase() == 'PDF' ? Colors.red : Colors.blue,
+    });
+    supportsDeCours.refresh();
+  }
+
+  void telechargerSupport(String titre) {
+    Get.snackbar(
+      'Téléchargement',
+      'Le fichier "$titre" est en cours de téléchargement...',
+      backgroundColor: const Color(0xFF00855A),
+      colorText: Colors.white,
+      snackPosition: SnackPosition.BOTTOM,
+      icon: const Icon(Icons.download, color: Colors.white),
+    );
   }
 
   void rejeterFiche(int ficheId, String initiateur) {
@@ -330,6 +425,7 @@ class SharedController extends GetxController {
         dateSeance: p.dateSeance,
         matiere: p.matiere,
         estPresent: p.estPresent,
+        justificatifUrl: p.justificatifUrl,
         motifJustificatif: p.motifJustificatif,
         typeJustificatif: p.typeJustificatif,
         statutJustification: valider ? 'VALIDE' : 'REJETE',

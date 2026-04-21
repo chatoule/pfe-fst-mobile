@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/shared_controller.dart';
 import 'justificatif_screen.dart';
+import '../enseignant/support_screen.dart';
 
 class EspaceEtudiantScreen extends StatefulWidget {
   @override
@@ -116,6 +117,7 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
                 _buildDrawerItem(0, Icons.dashboard_outlined, 'Mon Espace'),
                 _buildDrawerItem(1, Icons.event_busy_outlined, 'Mes Absences'),
                 _buildDrawerItem(2, Icons.upload_file_outlined, 'Justificatifs'),
+                _buildDrawerItem(3, Icons.library_books_outlined, 'Supports de cours'),
               ],
             ),
           ),
@@ -165,6 +167,7 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
       case 0: return 'Mon Espace';
       case 1: return 'Mes Absences';
       case 2: return 'Mes Justificatifs';
+      case 3: return 'Supports de cours';
       default: return 'Etudiant';
     }
   }
@@ -174,6 +177,7 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
       case 0: return _buildDashboard();
       case 1: return _buildAbsences();
       case 2: return _buildJustificatifs();
+      case 3: return const SupportsScreen(isReadOnly: true);
       default: return _buildDashboard();
     }
   }
@@ -425,6 +429,9 @@ class _EspaceEtudiantScreenState extends State<EspaceEtudiantScreen> {
                       SizedBox(width: 12),
                       _buildActionCard('Justificatifs',
                           Icons.upload_file, Colors.purple, 2),
+                      SizedBox(width: 12),
+                      _buildActionCard('Supports',
+                          Icons.library_books, Colors.blue, 3),
                     ],
                   ),
 

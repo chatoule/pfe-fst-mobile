@@ -1,109 +1,87 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart' as file_picker;
+import '../../controllers/shared_controller.dart';
 
 class SupportsScreen extends StatefulWidget {
+  final bool isReadOnly;
+
+  const SupportsScreen({super.key, this.isReadOnly = false});
+
   @override
   _SupportsScreenState createState() => _SupportsScreenState();
 }
 
 class _SupportsScreenState extends State<SupportsScreen> {
-  final List<Map<String, dynamic>> supports = [
-    {
-      'titre': 'Cours Chapitre 1 - Introduction',
-      'matiere': 'Informatique',
-      'type': 'PDF',
-      'date': '2024-03-10',
-      'taille': '2.4 MB',
-      'icon': Icons.picture_as_pdf,
-      'couleur': Colors.red,
-    },
-    {
-      'titre': 'TD Exercices Chapitre 2',
-      'matiere': 'Mathematiques',
-      'type': 'WORD',
-      'date': '2024-03-12',
-      'taille': '1.1 MB',
-      'icon': Icons.description,
-      'couleur': Colors.blue,
-    },
-  ];
-
-  void _ajouterSupport(String titre, String matiere, String type) {
-    setState(() {
-      supports.add({
-        'titre': titre,
-        'matiere': matiere,
-        'type': type.toUpperCase(),
-        'date': DateTime.now().toString().split(' ')[0],
-        'taille': '0.0 MB',
-        'icon': type.toUpperCase() == 'PDF' ? Icons.picture_as_pdf : Icons.description,
-        'couleur': type.toUpperCase() == 'PDF' ? Colors.red : Colors.blue,
-      });
-    });
-  }
+  final SharedController controller = SharedController.to;
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Header stats
-        Container(
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [Color(0xFF00855A), Color(0xFF003D29)],
-            ),
-          ),
-          child: Row(
-            children: [
-              _buildStatBadge('Total', '${supports.length}', Colors.white),
-              SizedBox(width: 12),
-              _buildStatBadge('PDF', '${supports.where((s) => s['type'] == 'PDF').length}', Colors.redAccent),
-              SizedBox(width: 12),
-              _buildStatBadge('Autres', '${supports.where((s) => s['type'] != 'PDF').length}', Colors.blueAccent),
-            ],
-          ),
-        ),
-
-        Expanded(
-          child: ListView.builder(
-            padding: EdgeInsets.all(16),
-            itemCount: supports.length,
-            itemBuilder: (context, index) {
-              final s = supports[index];
-              return _buildCard(s);
-            },
-          ),
-        ),
-
-        Padding(
-          padding: EdgeInsets.all(16),
-          child: SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              onPressed: () => _showAddSupportDialog(context),
-              icon: Icon(Icons.upload_file, color: Colors.white),
-              label: Text('Ajouter un support',
-                  style: TextStyle(color: Colors.white, fontSize: 15,
-                      fontWeight: FontWeight.bold)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFF00855A),
-                elevation: 2,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+    return Obx(() {
+      final supports = controller.supportsDeCours;
+      return Column(
+        children: [
+          // Header stats
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0xFF00855A), Color(0xFF003D29)],
               ),
             ),
+            child: Row(
+              children: [
+                _buildStatBadge('Total', '${supports.length}', Colors.white),
+                const SizedBox(width: 12),
+                _buildStatBadge('PDF', '${supports.where((s) => s['type'] == 'PDF').length}', Colors.redAccent),
+                const SizedBox(width: 12),
+                _buildStatBadge('Autres', '${supports.where((s) => s['type'] != 'PDF').length}', Colors.blueAccent),
+              ],
+            ),
           ),
-        ),
-      ],
-    );
+
+          Expanded(
+            child: supports.isEmpty
+                ? const Center(child: Text('Aucun support disponible'))
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: supports.length,
+                    itemBuilder: (context, index) {
+                      final s = supports[index];
+                      return _buildCard(s);
+                    },
+                  ),
+          ),
+
+          if (!widget.isReadOnly)
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: SizedBox(
+                width: double.infinity,
+                height: 50,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showAddSupportDialog(context),
+                  icon: const Icon(Icons.upload_file, color: Colors.white),
+                  label: const Text('Ajouter un support',
+                      style: TextStyle(color: Colors.white, fontSize: 15,
+                          fontWeight: FontWeight.bold)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00855A),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      );
+    });
   }
 
   Widget _buildCard(Map<String, dynamic> s) {
     return Container(
-      margin: EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
@@ -111,12 +89,12 @@ class _SupportsScreenState extends State<SupportsScreen> {
           BoxShadow(
             color: Colors.black.withOpacity(0.06),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Padding(
-        padding: EdgeInsets.all(14),
+        padding: const EdgeInsets.all(14),
         child: Row(
           children: [
             Container(
@@ -129,35 +107,38 @@ class _SupportsScreenState extends State<SupportsScreen> {
               child: Icon(s['icon'] as IconData,
                   color: s['couleur'] as Color, size: 24),
             ),
-            SizedBox(width: 12),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(s['titre'],
-                      style: TextStyle(
+                      style: const TextStyle(
                           fontWeight: FontWeight.bold,
                           fontSize: 14,
                           color: Color(0xFF003D29))),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(s['matiere'],
-                      style: TextStyle(
+                      style: const TextStyle(
                           color: Color(0xFF00855A),
                           fontSize: 12,
                           fontWeight: FontWeight.w500)),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Row(children: [
-                    Icon(Icons.calendar_today, size: 11, color: Colors.grey),
-                    SizedBox(width: 3),
+                    const Icon(Icons.calendar_today, size: 11, color: Colors.grey),
+                    const SizedBox(width: 3),
                     Text(s['date'],
-                        style: TextStyle(color: Colors.grey, fontSize: 11)),
+                        style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                    const SizedBox(width: 8),
+                    Text('• ${s['taille']}',
+                        style: const TextStyle(color: Colors.grey, fontSize: 11)),
                   ]),
                 ],
               ),
             ),
             IconButton(
-              icon: Icon(Icons.download, color: Color(0xFF00855A), size: 20),
-              onPressed: () {},
+              icon: const Icon(Icons.download, color: Color(0xFF00855A), size: 20),
+              onPressed: () => controller.telechargerSupport(s['titre']),
             ),
           ],
         ),
@@ -217,7 +198,6 @@ class _SupportsScreenState extends State<SupportsScreen> {
                   width: double.infinity,
                   child: OutlinedButton.icon(
                     onPressed: () async {
-                      // Importation réelle de fichier
                       try {
                         final result = await file_picker.FilePicker.platform.pickFiles(
                           type: file_picker.FileType.custom,
@@ -230,7 +210,6 @@ class _SupportsScreenState extends State<SupportsScreen> {
                             double sizeMb = result.files.single.size / (1024 * 1024);
                             fileSize = '${sizeMb.toStringAsFixed(1)} MB';
                             
-                            // Auto-détection du type et titre si vide
                             if (titreController.text.isEmpty) {
                               titreController.text = fileName!.split('.').first;
                             }
@@ -276,17 +255,12 @@ class _SupportsScreenState extends State<SupportsScreen> {
             ElevatedButton(
               onPressed: () {
                 if (titreController.text.isNotEmpty && fileName != null) {
-                  setState(() {
-                    supports.add({
-                      'titre': titreController.text,
-                      'matiere': matiereController.text.isEmpty ? 'Général' : matiereController.text,
-                      'type': typeSelectionne,
-                      'date': DateTime.now().toString().split(' ')[0],
-                      'taille': fileSize ?? '0.0 MB',
-                      'icon': typeSelectionne == 'PDF' ? Icons.picture_as_pdf : Icons.description,
-                      'couleur': typeSelectionne == 'PDF' ? Colors.red : Colors.blue,
-                    });
-                  });
+                  controller.ajouterSupport(
+                    titreController.text,
+                    matiereController.text.isEmpty ? 'Général' : matiereController.text,
+                    typeSelectionne,
+                    fileSize ?? '0.0 MB'
+                  );
                   Navigator.pop(context);
                   Get.snackbar(
                     'Succès', 

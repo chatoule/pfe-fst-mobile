@@ -240,55 +240,79 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
   }
 
   void _soumettre() {
-    setState(() {
-      _typeErreur = _typeSelectionne == null;
-      _motifErreur = _motifController.text.trim().isEmpty;
-    });
+    bool hasType = _typeSelectionne != null;
+    bool hasMotif = _motifController.text.trim().isNotEmpty;
+    bool hasFile = _fichierJoints.isNotEmpty;
 
-    if (_typeErreur || _motifErreur) {
+    if (!hasType && !hasMotif && !hasFile) {
+      setState(() {
+        _typeErreur = true;
+        _motifErreur = true;
+      });
       Get.snackbar(
-        'Champs manquants',
-        'Veuillez remplir tous les champs obligatoires',
+        'Justificatif vide',
+        'Veuillez fournir au moins une information (type, motif ou fichier)',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.orange[800],
         colorText: Colors.white,
-        icon: Icon(Icons.error_outline, color: Colors.white),
+        icon: Icon(Icons.info_outline, color: Colors.white),
       );
       return;
     }
 
+    setState(() {
+      _typeErreur = false;
+      _motifErreur = false;
+    });
+
+    // Afficher le dialogue de chargement
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Center(
-        child: Container(
-          padding: EdgeInsets.all(24),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(color: Color(0xFF00855A)),
-              SizedBox(height: 16),
-              Text('Envoi en cours...'),
-            ],
-          ),
+      builder: (context) => AlertDialog(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircularProgressIndicator(color: Color(0xFF00855A)),
+            SizedBox(height: 16),
+            Text('Envoi en cours...', 
+                 style: TextStyle(fontWeight: FontWeight.w500)),
+          ],
         ),
       ),
     );
 
+    // Simulation de l'envoi
     Future.delayed(Duration(seconds: 2), () {
-      Get.back();
-      // Ajouter cette ligne pour mettre à jour les données partagées
+      Navigator.of(context).pop(); // Ferme le dialogue de chargement
+      
+      String url = _fichierJoints.isNotEmpty 
+          ? _fichierJoints.first['chemin'] 
+          : 'justificatif_${widget.presenceId}.pdf';
+
       SharedController.to.soumettreJustificatif(
         widget.presenceId,
         _typeSelectionne ?? '',
         _motifController.text.trim(),
-        'justificatif_${widget.presenceId}.pdf',
+        url,
       );
-      Get.back();
+
+      // Notification de succès
+      Get.snackbar(
+        'Succès',
+        'Votre justificatif a été soumis avec succès.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Color(0xFF00855A),
+        colorText: Colors.white,
+        icon: Icon(Icons.check_circle, color: Colors.white),
+        margin: EdgeInsets.all(15),
+        duration: Duration(seconds: 3),
+      );
+
+      // Retour à l'écran précédent après un court délai
+      Future.delayed(Duration(milliseconds: 1500), () {
+        Get.back(); 
+      });
     });
   }
 
@@ -345,7 +369,7 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                   // ===== TYPE =====
                   _buildSection(
                     icon: Icons.category_outlined,
-                    titre: 'Type de justificatif *',
+                    titre: 'Type de justificatif',
                     child: Column(
                       children: _types.map((type) {
                         final isSelected = _typeSelectionne == type;
@@ -430,7 +454,7 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                   // ===== MOTIF =====
                   _buildSection(
                     icon: Icons.edit_note_outlined,
-                    titre: 'Motif de l\'absence *',
+                    titre: 'Motif de l\'absence',
                     child: TextField(
                       controller: _motifController,
                       maxLines: 4,
