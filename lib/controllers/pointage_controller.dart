@@ -1,84 +1,101 @@
+// lib/controllers/pointage_controller.dart
+
 import 'package:get/get.dart';
-import '../models/cours_model.dart';
+import 'package:flutter/material.dart';
 import '../services/pointage_service.dart';
+import '../services/seance_service.dart';
+import 'auth_controller.dart';
+import 'shared_controller.dart';
 
 class PointageController extends GetxController {
   final PointageService _pointageService = PointageService();
+  final SeanceService _seanceService = SeanceService();
 
   var isLoading = false.obs;
   var errorMessage = ''.obs;
-  var coursList = <CoursModel>[].obs;
-
+  var seancesList = <dynamic>[].obs;
   var totalHeuresMois = 0.0.obs;
-  var seancesValidees = 0.obs;
+  var seancesPointees = 0.obs;
 
   @override
   void onInit() {
     super.onInit();
-    chargerDonneesFictives();
-    calculerStatistiques();
+    chargerDonnees();
+  }
+
+  Future<void> chargerDonnees() async {
+    final user = AuthController.to.utilisateur.value;
+    if (user != null) {
+      await chargerSeancesEnseignant(user.id);
+    }
+  }
+
+  Future<void> chargerSeancesEnseignant(int enseignantId) async {
+    isLoading.value = true;
+    errorMessage.value = '';
+    try {
+      final res = await _seanceService.getSeancesEnseignant(enseignantId);
+      seancesList.assignAll(res);
+      calculerStatistiques();
+    } catch (e) {
+      errorMessage.value = 'Erreur lors du chargement des séances: $e';
+    } finally {
+      isLoading.value = false; // ✅ CORRIGÉ : une seule assignation, pas deux
+    }
   }
 
   void calculerStatistiques() {
-    // Simulation du calcul des heures (2h par séance terminée)
-    totalHeuresMois.value = coursList.where((c) => c.statut == 'TERMINE').length * 2.0;
-    seancesValidees.value = coursList.where((c) => c.statut == 'TERMINE').length;
+    seancesPointees.value = seancesList
+        .where((s) =>
+    s['statutPointage'] == 'TERMINE' ||
+        s['statutPointage'] == 'VALIDE')
+        .length;
+    totalHeuresMois.value = seancesPointees.value * 2.0;
   }
 
-  void chargerDonneesFictives() {
-    final today = DateTime.now();
-    final tomorrow = today.add(const Duration(days: 1));
-    
-    String formatDate(DateTime d) => d.toString().split(' ')[0];
+  Future<void> effectuerPointage({
+    required int seanceId,
+    required String heureDebut,
+    required String heureFin,
+    String? contenu,
+  }) async {
+    final user = AuthController.to.utilisateur.value;
+    if (user == null) return;
 
-    coursList.value = [
-      CoursModel(
-        id: 1, matiere: 'Algorithmique et Structure de Données',
-        enseignantNom: 'Moussa', enseignantPrenom: 'Ali',
-        dateSeance: formatDate(today), heureDebut: '08h00',
-        heureFin: '10h00', salle: 'Amphi A', statut: 'PLANIFIE',
-      ),
-      CoursModel(
-        id: 2, matiere: 'Base de Données Relationnelles',
-        enseignantNom: 'Moussa', enseignantPrenom: 'Ali',
-        dateSeance: formatDate(today), heureDebut: '10h00',
-        heureFin: '12h00', salle: 'Salle B1', statut: 'TERMINE',
-      ),
-      CoursModel(
-        id: 3, matiere: 'Développement Mobile Flutter',
-        enseignantNom: 'Moussa', enseignantPrenom: 'Ali',
-        dateSeance: formatDate(tomorrow), heureDebut: '14h00',
-        heureFin: '16h00', salle: 'Labo Info', statut: 'PLANIFIE',
-      ),
-    ];
-  }
-
-  Future<void> chargerCours(int enseignantId) async {
-    chargerDonneesFictives();
-  }
-
-  Future<void> chargerTousCours() async {
-    chargerDonneesFictives();
-  }
-
-  Future<void> pointerCours(int coursId) async {
-    final index = coursList.indexWhere((c) => c.id == coursId);
-    if (index != -1) {
-      final c = coursList[index];
-      coursList[index] = CoursModel(
-        id: c.id,
-        matiere: c.matiere,
-        enseignantNom: c.enseignantNom,
-        enseignantPrenom: c.enseignantPrenom,
-        dateSeance: c.dateSeance,
-        heureDebut: c.heureDebut,
-        heureFin: c.heureFin,
-        salle: c.salle,
-        statut: 'TERMINE',
+    isLoading.value = true;
+    try {
+      final success = await _pointageService.creerPointage(
+        date: DateTime.now().toString().split(' ')[0],
+        seanceId: seanceId,
+        enseignantId: user.id,
+        heureDebut: heureDebut, // ✅ la conversion se fait dans PointageService
+        heureFin: heureFin,
+        contenu: contenu,
       );
-      calculerStatistiques();
-      coursList.refresh();
-      // Le snackbar est maintenant géré dans FichePointageScreen pour éviter les doublons ou conflits de timing
+
+      if (success) {
+        Get.snackbar(
+          'Succès',
+          'Pointage effectué avec succès',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: const Color(0xFF00855A),
+          colorText: Colors.white,
+        );
+        await chargerDonnees();
+        SharedController.to.rafraichirDonnees();
+      } else {
+        Get.snackbar(
+          'Erreur',
+          'Échec du pointage. Vérifiez la connexion au serveur.',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      Get.snackbar('Erreur', 'Une erreur est survenue: $e');
+    } finally {
+      isLoading.value = false;
     }
   }
 }

@@ -15,49 +15,22 @@ class AuthController extends GetxController {
     isLoading.value = true;
     errorMessage.value = '';
 
-    await Future.delayed(Duration(seconds: 1));
-
-    if (email == 'enseignant@fst.ne' && password == '1234') {
-      utilisateur.value = UserModel(
-        id: 1, nom: 'Moussa Ibrahim', prenom: 'Dr.',
-        email: email, role: 'ENSEIGNANT', token: 'fake-token-123',
-      );
-      _redirecterSelonRole('ENSEIGNANT');
-    } else if (email == 'etudiant@fst.ne' && password == '1234') {
-      utilisateur.value = UserModel(
-        id: 2, nom: 'Mamane Sani', prenom: 'Abdoulaye',
-        email: email, role: 'ETUDIANT', token: 'fake-token-456',
-      );
-      _redirecterSelonRole('ETUDIANT');
-    } else if (email == 'doyen@fst.ne' && password == '1234') {
-      utilisateur.value = UserModel(
-        id: 3, nom: 'Oumarou Amadou', prenom: 'Dr. Ibrahim',
-        email: email, role: 'DOYEN', token: 'fake-token-789',
-      );
-      _redirecterSelonRole('DOYEN');
-    } else if (email == 'chef@fst.ne' && password == '1234') {
-      utilisateur.value = UserModel(
-        id: 4, nom: 'Hassimi', prenom: 'Ibrahim Seyni',
-        email: email, role: 'CHEF_DEPARTEMENT', token: 'fake-token-chef',
-      );
-      _redirecterSelonRole('CHEF_DEPARTEMENT');
-    } else if (email == 'superviseur@fst.ne' && password == '1234') {
-      utilisateur.value = UserModel(
-        id: 5, nom: '', prenom: 'Mubarak',
-        email: email, role: 'SUPERVISEUR', token: 'fake-token-sup',
-      );
-      _redirecterSelonRole('SUPERVISEUR');
-    } else if (email == 'secretaire@fst.ne' && password == '1234') {
-      utilisateur.value = UserModel(
-        id: 6, nom: 'Mariama', prenom: 'Sani',
-        email: email, role: 'SECRETAIRE', token: 'fake-token-sec',
-      );
-      _redirecterSelonRole('SECRETAIRE');
-    } else {
-      errorMessage.value = 'Email ou mot de passe incorrect';
+    try {
+      final user = await _authService.login(email, password);
+      
+      if (user != null) {
+        utilisateur.value = user;
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('token', user.token);
+        _redirecterSelonRole(user.role);
+      } else {
+        errorMessage.value = 'Identifiants incorrects ou serveur indisponible';
+      }
+    } catch (e) {
+      errorMessage.value = 'Erreur de connexion : $e';
+    } finally {
+      isLoading.value = false;
     }
-
-    isLoading.value = false;
   }
 
   void _redirecterSelonRole(String role) {

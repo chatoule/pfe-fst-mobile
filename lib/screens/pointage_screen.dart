@@ -10,8 +10,10 @@ import 'enseignant/presence_screen.dart';
 import 'enseignant/fiche_pointage_screen.dart';
 
 class PointageScreen extends StatefulWidget {
+  const PointageScreen({super.key});
+
   @override
-  _PointageScreenState createState() => _PointageScreenState();
+  State<PointageScreen> createState() => _PointageScreenState();
 }
 
 class _PointageScreenState extends State<PointageScreen> {
@@ -22,9 +24,17 @@ class _PointageScreenState extends State<PointageScreen> {
   @override
   void initState() {
     super.initState();
+    
+    // Récupérer l'index initial si fourni
+    if (Get.arguments is Map && Get.arguments['index'] != null) {
+      _currentIndex = Get.arguments['index'];
+    } else if (Get.arguments is int) {
+      _currentIndex = Get.arguments;
+    }
+
     final user = _authController.utilisateur.value;
     if (user != null) {
-      _pointageController.chargerCours(user.id);
+      _pointageController.chargerSeancesEnseignant(user.id);
     }
   }
 
@@ -48,10 +58,6 @@ class _PointageScreenState extends State<PointageScreen> {
           IconButton(
             icon: Icon(Icons.notifications_outlined),
             onPressed: () {},
-          ),
-          IconButton(
-            icon: Icon(Icons.logout),
-            onPressed: () => _authController.logout(),
           ),
         ],
       ),
@@ -81,7 +87,7 @@ class _PointageScreenState extends State<PointageScreen> {
                   width: 65,
                   height: 65,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
                   ),
@@ -110,7 +116,7 @@ class _PointageScreenState extends State<PointageScreen> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text('ENSEIGNANT',
@@ -159,7 +165,7 @@ class _PointageScreenState extends State<PointageScreen> {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: isActive ? Color(0xFF00855A).withOpacity(0.1) : Colors.transparent,
+        color: isActive ? Color(0xFF00855A).withValues(alpha: 0.1) : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
       child: ListTile(
@@ -193,7 +199,7 @@ class _PointageScreenState extends State<PointageScreen> {
   Widget _getScreen() {
     switch (_currentIndex) {
       case 0: return _buildDashboard();
-      case 1: return PresencesScreen();
+      case 1: return PresencesScreen(showAppBar: false);
       case 2: return RattrapagesScreen();
       case 3: return AnticipationsScreen();
       case 4: return SupportsScreen();
@@ -206,11 +212,9 @@ class _PointageScreenState extends State<PointageScreen> {
   Widget _buildDashboard() {
     return Obx(() {
       final user = _authController.utilisateur.value;
-      final cours = _pointageController.coursList;
+      final cours = _pointageController.seancesList;
       
-      final planifies = cours.where((c) => c.statut == 'PLANIFIE').length;
-      final termines = cours.where((c) => c.statut == 'TERMINE').length;
-      final enCours = cours.where((c) => c.statut == 'EN_COURS').length;
+      final planifies = cours.where((c) => c['statut'] == 'PLANIFIE').length;
 
       return SingleChildScrollView(
         child: Column(
@@ -235,7 +239,7 @@ class _PointageScreenState extends State<PointageScreen> {
                         width: 50,
                         height: 50,
                         decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
+                          color: Colors.white.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 2),
                         ),
@@ -275,7 +279,7 @@ class _PointageScreenState extends State<PointageScreen> {
                     children: [
                       _buildHeaderStat('Heures/Mois', '${_pointageController.totalHeuresMois.value}h', Icons.timer),
                       SizedBox(width: 12),
-                      _buildHeaderStat('Validées', '${_pointageController.seancesValidees.value}', Icons.verified_user_outlined),
+                      _buildHeaderStat('Validées', '${_pointageController.seancesPointees.value}', Icons.verified_user_outlined),
                       SizedBox(width: 12),
                       _buildHeaderStat('Planifiés', '$planifies', Icons.calendar_today),
                     ],
@@ -329,7 +333,6 @@ class _PointageScreenState extends State<PointageScreen> {
                     ],
                   ),
                   SizedBox(height: 12),
-
                   if (_pointageController.isLoading.value)
                     Center(child: CircularProgressIndicator(
                         color: Color(0xFF00855A)))
@@ -360,9 +363,9 @@ class _PointageScreenState extends State<PointageScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.white.withOpacity(0.2)),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -407,7 +410,7 @@ class _PointageScreenState extends State<PointageScreen> {
             borderRadius: BorderRadius.circular(14),
             boxShadow: [
               BoxShadow(
-                color: couleur.withOpacity(0.15),
+                color: couleur.withValues(alpha: 0.15),
                 blurRadius: 10,
                 offset: Offset(0, 4),
               ),
@@ -419,7 +422,7 @@ class _PointageScreenState extends State<PointageScreen> {
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: couleur.withOpacity(0.1),
+                  color: couleur.withValues(alpha: 0.1),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(icon, color: couleur, size: 22),
@@ -440,7 +443,9 @@ class _PointageScreenState extends State<PointageScreen> {
   Widget _buildCoursCard(dynamic cours) {
     Color statutColor;
     IconData statutIcon;
-    switch (cours.statut) {
+    final String statutStr = cours['statut'] ?? 'PLANIFIE';
+    
+    switch (statutStr) {
       case 'TERMINE':
         statutColor = Colors.green;
         statutIcon = Icons.check_circle;
@@ -461,7 +466,7 @@ class _PointageScreenState extends State<PointageScreen> {
     // Formater la date pour l'affichage dans la carte
     String dateAffichee = '';
     try {
-      final d = DateTime.parse(cours.dateSeance);
+      final d = DateTime.parse(cours['dateSeance']);
       final now = DateTime.now();
       if (d.day == now.day && d.month == now.month && d.year == now.year) {
         dateAffichee = 'Aujourd\'hui';
@@ -469,7 +474,7 @@ class _PointageScreenState extends State<PointageScreen> {
         dateAffichee = '${d.day}/${d.month}/${d.year}';
       }
     } catch (e) {
-      dateAffichee = cours.dateSeance;
+      dateAffichee = cours['dateSeance'] ?? '';
     }
 
     return Container(
@@ -479,7 +484,7 @@ class _PointageScreenState extends State<PointageScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: Offset(0, 4),
           ),
@@ -496,7 +501,7 @@ class _PointageScreenState extends State<PointageScreen> {
                   width: 44,
                   height: 44,
                   decoration: BoxDecoration(
-                    color: statutColor.withOpacity(0.1),
+                    color: statutColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(statutIcon, color: statutColor, size: 22),
@@ -506,7 +511,7 @@ class _PointageScreenState extends State<PointageScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(cours.matiere,
+                      Text(cours['matiere'] ?? 'Inconnu',
                           style: const TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
@@ -519,8 +524,8 @@ class _PointageScreenState extends State<PointageScreen> {
                         runSpacing: 4,
                         children: [
                           _buildSmallInfo(Icons.calendar_today, dateAffichee),
-                          _buildSmallInfo(Icons.access_time, '${cours.heureDebut} - ${cours.heureFin}'),
-                          _buildSmallInfo(Icons.location_on, 'Salle ${cours.salle}'),
+                          _buildSmallInfo(Icons.access_time, '${cours['heureDebut'] ?? ""} - ${cours['heureFin'] ?? ""}'),
+                          _buildSmallInfo(Icons.location_on, 'Salle ${cours['salle'] ?? ""}'),
                         ],
                       ),
                     ],
@@ -529,11 +534,11 @@ class _PointageScreenState extends State<PointageScreen> {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: statutColor.withOpacity(0.1),
+                    color: statutColor.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: statutColor.withOpacity(0.3)),
+                    border: Border.all(color: statutColor.withValues(alpha: 0.3)),
                   ),
-                  child: Text(cours.statut,
+                  child: Text(statutStr,
                       style: TextStyle(
                           color: statutColor,
                           fontWeight: FontWeight.bold,
@@ -541,19 +546,19 @@ class _PointageScreenState extends State<PointageScreen> {
                 ),
               ],
             ),
-            if (cours.statut == 'PLANIFIE') ...[
+            if (statutStr == 'PLANIFIE') ...[
               SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
                   onPressed: () => Get.to(() => FichePointageScreen(
                     cours: {
-                      'id': cours.id,
-                      'matiere': cours.matiere,
-                      'heureDebut': cours.heureDebut,
-                      'heureFin': cours.heureFin,
-                      'salle': cours.salle,
-                      'dateSeance': cours.dateSeance,
+                      'id': cours['id'],
+                      'matiere': cours['matiere'],
+                      'heureDebut': cours['heureDebut'],
+                      'heureFin': cours['heureFin'],
+                      'salle': cours['salle'],
+                      'dateSeance': cours['dateSeance'],
                       'niveau': 'L3',
                       'semestre': 'S1',
                     },

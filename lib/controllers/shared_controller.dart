@@ -1,279 +1,248 @@
+
+
 import 'package:get/get.dart';
 import 'package:flutter/material.dart';
 import 'dart:typed_data';
 import '../models/presence_model.dart';
+import '../services/module_service.dart';
+import '../services/seance_service.dart';
+import '../services/pointage_service.dart';
+import '../services/presence_service.dart';
+import 'auth_controller.dart';
 
 class SharedController extends GetxController {
   static SharedController get to => Get.find();
 
-  // ===== DÉPARTEMENTS ET FILTRAGE =====
-  var departements = ['Tous les départements', 'Télécommunications', 'Informatique'].obs;
+  final ModuleService _moduleService = ModuleService();
+  final SeanceService _seanceService = SeanceService();
+  final PointageService _pointageService = PointageService();
+  final PresenceService _presenceService = PresenceService();
+
+  // ===== ÉTATS OBSERVABLES =====
+  var departements = ['Tous les départements'].obs;
   var selectedDepartement = 'Tous les départements'.obs;
-
-  // ===== FICHES DE POINTAGE =====
   var fichesPointage = <Map<String, dynamic>>[].obs;
-
-  // ===== PRESENCES PARTAGEES =====
   var presences = <PresenceModel>[].obs;
+  var rattrapages = <Map<String, String>>[].obs;
+  var anticipations = <Map<String, String>>[].obs;
+  var supportsDeCours = <Map<String, dynamic>>[].obs;
+  var coursDuJour = <Map<String, dynamic>>[].obs;
+  var isLoading = false.obs;
+  var etudiantsEnSession = <Map<String, dynamic>>[].obs;
 
-  // ===== RATTRAPAGES =====
-  var rattrapages = <Map<String, String>>[
-    {
-      'id': '1',
-      'matiere': 'Mathematiques',
-      'date': '2024-03-20',
-      'heure': '08h00 - 10h00',
-      'salle': 'A101',
-      'statut': 'EN_ATTENTE',
-    },
-    {
-      'id': '2',
-      'matiere': 'Physique',
-      'date': '2024-03-22',
-      'heure': '10h00 - 12h00',
-      'salle': 'B202',
-      'statut': 'VALIDE',
-    },
-    {
-      'id': '3',
-      'matiere': 'Chimie',
-      'date': '2024-03-25',
-      'heure': '14h00 - 16h00',
-      'salle': 'C303',
-      'statut': 'REJETE',
-    },
-  ].obs;
-
-  // ===== SUPPORTS DE COURS =====
-  var supportsDeCours = <Map<String, dynamic>>[
-    {
-      'id': '1',
-      'titre': 'Cours Chapitre 1 - Introduction',
-      'matiere': 'Informatique',
-      'type': 'PDF',
-      'date': '2024-03-10',
-      'taille': '2.4 MB',
-      'icon': Icons.picture_as_pdf,
-      'couleur': Colors.red,
-    },
-    {
-      'id': '2',
-      'titre': 'TD Exercices Chapitre 2',
-      'matiere': 'Mathematiques',
-      'type': 'WORD',
-      'date': '2024-03-12',
-      'taille': '1.1 MB',
-      'icon': Icons.description,
-      'couleur': Colors.blue,
-    },
-  ].obs;
-
-  // ===== SIGNATURES ET NOMS OFFICIELS =====
+  // ===== SIGNATURES =====
   var signatureSuperviseur = Rx<Uint8List?>(null);
   var signatureChefDep = Rx<Uint8List?>(null);
   var signatureDoyen = Rx<Uint8List?>(null);
   var nomChefDep = 'Ibrahim Seyni Hassimi'.obs;
   var nomSuperviseur = 'Mubarak'.obs;
   var nomDoyen = 'Dr. Ibrahim Oumarou Amadou'.obs;
-  var semestre = 'Semestre 2025/2026'.obs;
-
-  // ===== COURS DU JOUR (Basé sur l'emploi du temps TELECOM fourni) =====
-  var coursDuJour = <Map<String, dynamic>>[].obs;
+  var semestre = 'Semestre 2 (2023-2024)'.obs;
 
   @override
   void onInit() {
     super.onInit();
-    _initDonneesReelles();
+    rafraichirDonnees();
   }
 
-  void _initDonneesReelles() {
-    _initPresencesFictives();
-    // ===== INJECTION DES COURS FST (INFO PRIORITÉ) =====
-    coursDuJour.value = [
-      {
-        'matiere': 'Algorithmique Avancée',
-        'enseignant': 'Dr. Moussa Ibrahim',
-        'salle': 'Labo Info 1',
-        'heure': '08h00 - 10h00',
-        'niveau': 'L2 INFO',
-        'statut': 'EN_COURS',
-        'total': 60,
-        'presents': 58,
-        'departement': 'Informatique',
-      },
-      {
-        'matiere': 'Base de Données',
-        'enseignant': 'Mme. Fatouma Zakari',
-        'salle': 'Salle 05',
-        'heure': '10h00 - 12h00',
-        'niveau': 'L1 INFO',
-        'statut': 'PLANIFIE',
-        'total': 75,
-        'presents': 0,
-        'departement': 'Informatique',
-      },
-      {
-        'matiere': 'Systèmes d\'Exploitation',
-        'enseignant': 'Ibrahim Seyni Hassimi',
-        'salle': 'Salle 03',
-        'heure': '14h00 - 17h00',
-        'niveau': 'L2 INFO',
-        'statut': 'PLANIFIE',
-        'total': 55,
-        'presents': 0,
-        'departement': 'Informatique',
-      },
-    ];
+  // ===== RÉCUPÉRATION DÉPARTEMENT DE L'UTILISATEUR =====
+  int get _departementId {
+    // TODO: remplacer par user.departementId quand disponible dans UserModel
+    return 1;
+  }
 
-    // ===== FICHES POINTAGE INITIALES (Historique pour démonstration) =====
-    fichesPointage.value = [
-      {
-        'id': 1,
-        'enseignantId': 201,
-        'enseignantNom': 'Adamou Issaka Kodo',
-        'matiere': 'RF, Antennes et Hyperfréquences',
-        'salle': 'Salle 01',
-        'dateSeance': '2024-04-01',
-        'heureDebut': '08h00',
-        'heureFin': '11h30',
-        'duree': 210,
-        'contenu': 'Étude des diagrammes de rayonnement',
-        'statut': 'VALIDE',
-        'confirmerSuperviseur': true,
-        'valideChefDep': true,
-        'departement': 'Télécommunications',
-      },
-      {
-        'id': 2,
-        'enseignantId': 202,
-        'enseignantNom': 'Hassane Kabirou',
-        'matiere': 'Architecture des Ordinateurs',
-        'salle': 'Salle 02',
-        'dateSeance': '2024-04-02',
-        'heureDebut': '09h00',
-        'heureFin': '11h00',
-        'duree': 120,
-        'contenu': 'Registres et Unité Arithmétique et Logique',
-        'statut': 'VALIDE',
-        'confirmerSuperviseur': true,
-        'valideChefDep': true,
-        'departement': 'Informatique',
-      },
-      {
-        'id': 3,
-        'enseignantId': 201,
-        'enseignantNom': 'Adamou Issaka Kodo',
-        'matiere': 'Nouveau Module',
-        'salle': 'Salle 03',
-        'dateSeance': '2024-04-03',
-        'heureDebut': '08h00',
-        'heureFin': '10h00',
-        'duree': 120,
-        'contenu': 'Introduction générale',
-        'statut': 'EN_COURS',
-        'confirmerSuperviseur': false,
-        'valideChefDep': false,
-        'departement': 'Télécommunications',
+  // ===== APPELS API =====
+  Future<void> rafraichirDonnees() async {
+    isLoading.value = true;
+    try {
+      // 1. Modules et départements
+      final modules = await _moduleService.getAllModules();
+      Set<String> deps = {'Tous les départements'};
+      for (var m in modules) {
+        if (m['departementNom'] != null) {
+          deps.add(m['departementNom']);
+        }
       }
-    ];
+      departements.value = deps.toList();
+
+      // 2. Séances d'aujourd'hui
+      final seances = await _seanceService.getSeancesAujourdhui(_departementId);
+      coursDuJour.value = List<Map<String, dynamic>>.from(seances);
+
+      // 3. Pointages en attente
+      final pointages = await _pointageService.getPointagesEnAttente();
+      fichesPointage.value = List<Map<String, dynamic>>.from(pointages);
+
+      // 4. ✅ CORRIGÉ : Charger les présences de l'étudiant connecté si rôle ETUDIANT
+      final user = Get.find<AuthController>().utilisateur.value;
+      if (user != null) {
+        final mesPresences = await _presenceService.getPresencesEtudiant(user.id);
+        presences.value = mesPresences
+            .map((p) => PresenceModel.fromJson(p as Map<String, dynamic>))
+            .toList();
+        _actualiserListeRouge();
+      }
+    } catch (e) {
+      print("Erreur rafraichirDonnees: $e");
+    } finally {
+      isLoading.value = false;
+    }
   }
 
-  void _initPresencesFictives() {
-    final matieres = ['RF, Antennes et Hyperfréquences', 'Réseaux satellites, RADAR et GPS', 'Traitement Numérique du Signal', 'Electronique Analog. & Num.'];
-    final noms = ['Moussa', 'Abdoulaye', 'Fatimata', 'Ibrahim', 'Zainab'];
-    final prenoms = ['Adamou', 'Oumarou', 'Sani', 'Ali', 'Issoufou'];
-
-    // S'assurer que l'étudiant de test (ID 2) a des absences
-    for (int i = 0; i < 5; i++) {
-       presences.add(PresenceModel(
-        id: i + 1,
-        etudiantId: 2,
-        nomEtudiant: 'Moussa',
-        prenomEtudiant: 'Adamou',
-        coursId: i + 1,
-        dateSeance: '2024-04-0${i+1}',
-        matiere: matieres[i % matieres.length],
-        estPresent: false,
-        statutJustification: i == 0 ? 'EN_ATTENTE' : null,
-        motifJustificatif: i == 0 ? 'Raison médicale' : null,
-        typeJustificatif: 'Certificat médical',
-      ));
-    }
-
-    for (int i = 5; i < 50; i++) {
-      final etudiantId = 100 + (i % 5);
-      final matiere = matieres[i % matieres.length];
-      final estPresent = (i % 7) != 0; // Quelques absences
-      
-      presences.add(PresenceModel(
-        id: i + 1,
-        etudiantId: etudiantId,
-        nomEtudiant: noms[i % 5],
-        prenomEtudiant: prenoms[i % 5],
-        coursId: (i % 4) + 1,
-        dateSeance: '2024-04-01',
-        matiere: matiere,
-        estPresent: estPresent,
-        statutJustification: !estPresent && (i % 3 == 0) ? 'EN_ATTENTE' : null,
-        motifJustificatif: !estPresent && (i % 3 == 0) ? 'Raison médicale' : null,
-        typeJustificatif: 'Certificat médical',
-      ));
-    }
-    _actualiserListeRouge();
-  }
-
-  // ===== METHODES FICHES POINTAGE =====
+  // ===== FICHES POINTAGE =====
+  // ⚠️ NOTE : soumettreFiche est local uniquement — le vrai pointage se fait
+  // via PointageController.effectuerPointage() qui appelle l'API
   void soumettreFiche(Map<String, dynamic> fiche) {
     fichesPointage.add({
       'id': fichesPointage.length + 1,
       ...fiche,
-      'departement': 'Télécommunications', // Par défaut pour la démo
-      'statut': 'EN_COURS',
+      'statut': 'EN_ATTENTE',
       'confirmerSuperviseur': false,
       'valideChefDep': false,
       'dateSoumission': DateTime.now().toString(),
     });
   }
 
-  void confirmerParSuperviseur(int ficheId) {
-    final index = fichesPointage.indexWhere((f) => f['id'] == ficheId);
-    if (index != -1) {
-      final fiche = Map<String, dynamic>.from(fichesPointage[index]);
-      fiche['confirmerSuperviseur'] = true;
-      fiche['statut'] = fiche['valideChefDep'] == true ? 'VALIDE' : 'CONFIRME';
-      fichesPointage[index] = fiche;
-      fichesPointage.refresh();
+  Future<void> confirmerParSuperviseur(int ficheId) async {
+    isLoading.value = true;
+    try {
+      final success = await _pointageService.updateStatut(ficheId, 'CONFIRME');
+      if (success) {
+        final index = fichesPointage.indexWhere((f) => f['id'] == ficheId);
+        if (index != -1) {
+          final fiche = Map<String, dynamic>.from(fichesPointage[index]);
+          fiche['confirmerSuperviseur'] = true;
+          fiche['statut'] = 'CONFIRME';
+          fichesPointage[index] = fiche;
+          fichesPointage.refresh();
+        }
+        Get.snackbar(
+          'Succès',
+          'Séance confirmée avec succès.',
+          backgroundColor: const Color(0xFF00855A),
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+          icon: const Icon(Icons.check_circle, color: Colors.white),
+        );
+      } else {
+        // ✅ CORRIGÉ : snackbar si endpoint non disponible
+        Get.snackbar(
+          'Fonctionnalité en attente',
+          'La confirmation sera disponible dès que le backend est prêt.',
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+          icon: const Icon(Icons.info_outline, color: Colors.white),
+        );
+      }
+    } finally {
+      isLoading.value = false;
     }
   }
 
-  void validerParChefDep(int ficheId) {
-    final index = fichesPointage.indexWhere((f) => f['id'] == ficheId);
-    if (index != -1) {
-      final fiche = Map<String, dynamic>.from(fichesPointage[index]);
-      fiche['valideChefDep'] = true;
-      fiche['statut'] = fiche['confirmerSuperviseur'] == true ? 'VALIDE' : 'EN_ATTENTE_SUPERVISEUR';
-      fichesPointage[index] = fiche;
-      fichesPointage.refresh();
+  Future<void> validerParChefDep(int ficheId) async {
+    isLoading.value = true;
+    try {
+      final success = await _pointageService.updateStatut(ficheId, 'VALIDE');
+      if (success) {
+        final index = fichesPointage.indexWhere((f) => f['id'] == ficheId);
+        if (index != -1) {
+          final fiche = Map<String, dynamic>.from(fichesPointage[index]);
+          fiche['valideChefDep'] = true;
+          fiche['statut'] = 'VALIDE';
+          fichesPointage[index] = fiche;
+          fichesPointage.refresh();
+        }
+        Get.snackbar(
+          'Succès',
+          'Pointage validé avec succès.',
+          backgroundColor: const Color(0xFF00855A),
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+          icon: const Icon(Icons.verified, color: Colors.white),
+        );
+      } else {
+        // ✅ CORRIGÉ : snackbar si PUT /pointages/{id}/statut manquant
+        Get.snackbar(
+          'Fonctionnalité en attente',
+          'Validation disponible dès que PUT /pointages/{id}/statut est créé par Dayyanatou.',
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+          icon: const Icon(Icons.info_outline, color: Colors.white),
+        );
+      }
+    } finally {
+      isLoading.value = false;
     }
   }
 
-  // ===== METHODES PRESENCES =====
-  void marquerPresence(int etudiantId, int coursId, bool estPresent, String dateSeance, String matiere, String nom, String prenom) {
-    final index = presences.indexWhere((p) => p.etudiantId == etudiantId && p.matiere == matiere);
+  Future<void> rejeterFiche(int ficheId, String initiateur) async {
+    isLoading.value = true;
+    try {
+      final success = await _pointageService.updateStatut(
+        ficheId,
+        'REJETE',
+        motif: 'Rejeté par $initiateur',
+      );
+      if (success) {
+        final index = fichesPointage.indexWhere((f) => f['id'] == ficheId);
+        if (index != -1) {
+          final fiche = Map<String, dynamic>.from(fichesPointage[index]);
+          fiche['statut'] = 'REJETE';
+          fiche['motifRejet'] = 'Rejeté par $initiateur';
+          fichesPointage[index] = fiche;
+          fichesPointage.refresh();
+        }
+        Get.snackbar(
+          'Rejeté',
+          'Pointage rejeté.',
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+        );
+      } else {
+        // ✅ CORRIGÉ : snackbar si endpoint manquant
+        Get.snackbar(
+          'Fonctionnalité en attente',
+          'Le rejet sera disponible dès que le backend est prêt.',
+          backgroundColor: Colors.orange,
+          colorText: Colors.white,
+          snackPosition: SnackPosition.BOTTOM,
+          icon: const Icon(Icons.info_outline, color: Colors.white),
+        );
+      }
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // ===== PRÉSENCES =====
+  void marquerPresence(
+      int etudiantId,
+      int seanceId,
+      bool estPresent,
+      String dateSeance,
+      String matiere,
+      String nom,
+      String prenom,
+      ) {
+    final index = presences.indexWhere(
+            (p) => p.etudiantId == etudiantId && p.matiere == matiere);
     if (index != -1) {
       presences[index] = PresenceModel(
         id: presences[index].id,
         etudiantId: etudiantId,
         nomEtudiant: nom,
         prenomEtudiant: prenom,
-        coursId: coursId,
+        coursId: seanceId,
         dateSeance: dateSeance,
         matiere: matiere,
         estPresent: estPresent,
-        justificatifUrl: index != -1 ? presences[index].justificatifUrl : null,
-        motifJustificatif: index != -1 ? presences[index].motifJustificatif : null,
-        typeJustificatif: index != -1 ? presences[index].typeJustificatif : null,
-        statutJustification: index != -1 ? presences[index].statutJustification : null,
+        justificatifUrl: presences[index].justificatifUrl,
+        motifJustificatif: presences[index].motifJustificatif,
+        typeJustificatif: presences[index].typeJustificatif,
+        statutJustification: presences[index].statutJustification,
       );
     } else {
       presences.add(PresenceModel(
@@ -281,74 +250,140 @@ class SharedController extends GetxController {
         etudiantId: etudiantId,
         nomEtudiant: nom,
         prenomEtudiant: prenom,
-        coursId: coursId,
+        coursId: seanceId,
         dateSeance: dateSeance,
         matiere: matiere,
         estPresent: estPresent,
       ));
     }
     presences.refresh();
+
+    // Envoi à l'API en arrière-plan
+    if (seanceId > 0) {
+      _presenceService
+          .marquerPresence(
+        datePresence: dateSeance,
+        estPresent: estPresent,
+        etudiantId: etudiantId,
+        seanceId: seanceId,
+      )
+          .then((success) {
+        if (!success) {
+          Get.snackbar(
+            'Avertissement',
+            'Présence enregistrée localement mais non synchronisée avec le serveur.',
+            backgroundColor: Colors.orange,
+            colorText: Colors.white,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+      });
+    }
+    _actualiserListeRouge();
   }
 
-  // ===== GESTION DES ABSENCES ET JUSTIFICATIFS =====
-  var etudiantsEnSession = <Map<String, dynamic>>[].obs;
+  // ===== RATTRAPAGE =====
+  Future<void> ajouterRattrapage(
+      String matiere, String date, String heure, String salle) async {
+    isLoading.value = true;
+    try {
+      final user = Get.find<AuthController>().utilisateur.value;
+      if (user == null) return;
 
-  double getTauxPresence(int etudiantId) {
-    final mesPresences = presences.where((p) => p.etudiantId == etudiantId).toList();
-    if (mesPresences.isEmpty) return 100.0;
-    final presents = mesPresences.where((p) => p.estPresent || p.statutJustification == 'VALIDE').length;
-    return (presents / mesPresences.length) * 100;
-  }
-
-  List<PresenceModel> getPresencesEtudiant(int etudiantId) {
-    return presences.where((p) => p.etudiantId == etudiantId).toList();
-  }
-
-  List<PresenceModel> getAbsencesEtudiant(int etudiantId) {
-    return presences.where((p) => p.etudiantId == etudiantId && !p.estPresent).toList();
-  }
-
-  int getNombreAbsencesNonJustifiees(int etudiantId) {
-    return presences.where((p) => p.etudiantId == etudiantId && !p.estPresent && p.statutJustification != 'VALIDE').length;
-  }
-
-  bool estEnSessionRattrapage(int etudiantId) {
-    return getNombreAbsencesNonJustifiees(etudiantId) >= 3;
-  }
-
-  void soumettreJustificatif(int presenceId, String type, String motif, String url) {
-    final index = presences.indexWhere((p) => p.id == presenceId);
-    if (index != -1) {
-      final p = presences[index];
-      presences[index] = PresenceModel(
-        id: p.id,
-        etudiantId: p.etudiantId,
-        nomEtudiant: p.nomEtudiant,
-        prenomEtudiant: p.prenomEtudiant,
-        coursId: p.coursId,
-        dateSeance: p.dateSeance,
-        matiere: p.matiere,
-        estPresent: p.estPresent,
-        justificatifUrl: url,
-        typeJustificatif: type,
-        motifJustificatif: motif,
-        statutJustification: 'EN_ATTENTE',
+      final modules = await _moduleService.getAllModules();
+      final module = modules.firstWhere(
+            (m) => m['intitule'] == matiere,
+        orElse: () => modules.isNotEmpty ? modules[0] : {'id': 1},
       );
-      presences.refresh();
-      _actualiserListeRouge();
+
+      String heureDebut = heure;
+      String heureFin = heure;
+      if (heure.contains('-')) {
+        heureDebut = heure.split('-').first.trim();
+        heureFin = heure.split('-').last.trim();
+      }
+
+      final success = await _seanceService.creerSeance(
+        dateSeance: date,
+        heureDebut: heureDebut,
+        heureFin: heureFin,
+        typeSeance: 'RATTRAPAGE',
+        enseignantId: user.id,
+        moduleId: module['id'],
+        salleId: 1,
+      );
+
+      if (success) {
+        rattrapages.add({
+          'id': DateTime.now().millisecondsSinceEpoch.toString(),
+          'matiere': matiere,
+          'date': date,
+          'heure': heure,
+          'salle': salle,
+          'statut': 'EN_ATTENTE',
+        });
+        rattrapages.refresh();
+      } else {
+        Get.snackbar('Erreur', 'Impossible de créer le rattrapage sur le serveur.',
+            backgroundColor: Colors.red, colorText: Colors.white);
+      }
+    } catch (e) {
+      print("Erreur ajouterRattrapage: $e");
+    } finally {
+      isLoading.value = false;
     }
   }
 
-  void ajouterRattrapage(String matiere, String date, String heure, String salle) {
-    rattrapages.add({
-      'id': DateTime.now().millisecondsSinceEpoch.toString(),
-      'matiere': matiere,
-      'date': date,
-      'heure': heure,
-      'salle': salle,
-      'statut': 'EN_ATTENTE',
-    });
-    rattrapages.refresh();
+  // ===== ANTICIPATION =====
+  Future<void> ajouterAnticipation(
+      String matiere, String date, String heure, String salle) async {
+    isLoading.value = true;
+    try {
+      final user = Get.find<AuthController>().utilisateur.value;
+      if (user == null) return;
+
+      final modules = await _moduleService.getAllModules();
+      final module = modules.firstWhere(
+            (m) => m['intitule'] == matiere,
+        orElse: () => modules.isNotEmpty ? modules[0] : {'id': 1},
+      );
+
+      String heureDebut = heure;
+      String heureFin = heure;
+      if (heure.contains('-')) {
+        heureDebut = heure.split('-').first.trim();
+        heureFin = heure.split('-').last.trim();
+      }
+
+      final success = await _seanceService.creerSeance(
+        dateSeance: date,
+        heureDebut: heureDebut,
+        heureFin: heureFin,
+        typeSeance: 'ANTICIPATION',
+        enseignantId: user.id,
+        moduleId: module['id'],
+        salleId: 1,
+      );
+
+      if (success) {
+        anticipations.add({
+          'id': DateTime.now().millisecondsSinceEpoch.toString(),
+          'matiere': matiere,
+          'date': date,
+          'heure': heure,
+          'salle': salle,
+          'statut': 'PLANIFIE',
+        });
+        anticipations.refresh();
+      } else {
+        Get.snackbar('Erreur', "Impossible de créer l'anticipation sur le serveur.",
+            backgroundColor: Colors.red, colorText: Colors.white);
+      }
+    } catch (e) {
+      print("Erreur ajouterAnticipation: $e");
+    } finally {
+      isLoading.value = false;
+    }
   }
 
   void validerRattrapage(String id) {
@@ -371,8 +406,9 @@ class SharedController extends GetxController {
     }
   }
 
-  // ===== METHODES SUPPORTS =====
-  void ajouterSupport(String titre, String matiere, String type, String taille) {
+  // ===== SUPPORTS =====
+  void ajouterSupport(String titre, String matiere, String type, String taille,
+      {String? path}) {
     supportsDeCours.add({
       'id': DateTime.now().millisecondsSinceEpoch.toString(),
       'titre': titre,
@@ -380,7 +416,10 @@ class SharedController extends GetxController {
       'type': type.toUpperCase(),
       'date': DateTime.now().toString().split(' ')[0],
       'taille': taille,
-      'icon': type.toUpperCase() == 'PDF' ? Icons.picture_as_pdf : Icons.description,
+      'path': path,
+      'icon': type.toUpperCase() == 'PDF'
+          ? Icons.picture_as_pdf
+          : Icons.description,
       'couleur': type.toUpperCase() == 'PDF' ? Colors.red : Colors.blue,
     });
     supportsDeCours.refresh();
@@ -397,19 +436,38 @@ class SharedController extends GetxController {
     );
   }
 
-  void rejeterFiche(int ficheId, String initiateur) {
-    final index = fichesPointage.indexWhere((f) => f['id'] == ficheId);
+  // ===== JUSTIFICATIFS =====
+  void soumettreJustificatif(
+      int presenceId, String type, String motif, String url) {
+    final index = presences.indexWhere((p) => p.id == presenceId);
     if (index != -1) {
-      final fiche = Map<String, dynamic>.from(fichesPointage[index]);
-      fiche['statut'] = 'REJETE';
-      fiche['motifRejet'] = 'Rejeté par $initiateur';
-      fichesPointage[index] = fiche;
-      fichesPointage.refresh();
+      final p = presences[index];
+      presences[index] = PresenceModel(
+        id: p.id,
+        etudiantId: p.etudiantId,
+        nomEtudiant: p.nomEtudiant,
+        prenomEtudiant: p.prenomEtudiant,
+        coursId: p.coursId,
+        dateSeance: p.dateSeance,
+        matiere: p.matiere,
+        estPresent: p.estPresent,
+        justificatifUrl: url,
+        typeJustificatif: type,
+        motifJustificatif: motif,
+        statutJustification: 'EN_ATTENTE',
+      );
+      presences.refresh();
+      _actualiserListeRouge();
     }
   }
 
   List<PresenceModel> getJustificatifsEnAttente() {
-    return presences.where((p) => p.estPresent == false && p.statutJustification == 'EN_ATTENTE' && p.motifJustificatif != null).toList();
+    return presences
+        .where((p) =>
+    !p.estPresent &&
+        p.statutJustification == 'EN_ATTENTE' &&
+        p.motifJustificatif != null)
+        .toList();
   }
 
   void traiterJustificatif(int presenceId, bool valider) {
@@ -432,13 +490,22 @@ class SharedController extends GetxController {
       );
       presences.refresh();
       _actualiserListeRouge();
+
+      // ✅ Snackbar de confirmation
+      Get.snackbar(
+        valider ? 'Justificatif validé' : 'Justificatif rejeté',
+        valider
+            ? 'Le justificatif a été accepté.'
+            : 'Le justificatif a été refusé.',
+        backgroundColor: valider ? const Color(0xFF00855A) : Colors.red,
+        colorText: Colors.white,
+        snackPosition: SnackPosition.BOTTOM,
+      );
     }
   }
 
   void _actualiserListeRouge() {
-    // Logique simplifiée : Compte les absences non justifiées par étudiant
     final Map<int, Map<String, dynamic>> mapAbsences = {};
-    
     for (var p in presences) {
       if (!p.estPresent && p.statutJustification != 'VALIDE') {
         if (!mapAbsences.containsKey(p.etudiantId)) {
@@ -452,29 +519,87 @@ class SharedController extends GetxController {
         mapAbsences[p.etudiantId]!['absences']++;
       }
     }
-
     etudiantsEnSession.value = mapAbsences.values
         .where((e) => (e['absences'] as int) >= 3)
         .toList();
   }
 
-  void signerSuperviseur(Uint8List signature) {
-    signatureSuperviseur.value = signature;
+  // ===== STATS =====
+  double getTauxPresence(int etudiantId) {
+    final mesPresences =
+    presences.where((p) => p.etudiantId == etudiantId).toList();
+    if (mesPresences.isEmpty) return 100.0;
+    final presents = mesPresences
+        .where((p) => p.estPresent || p.statutJustification == 'VALIDE')
+        .length;
+    return (presents / mesPresences.length) * 100;
   }
 
-  void signerChefDep(Uint8List signature) {
-    signatureChefDep.value = signature;
+  List<PresenceModel> getPresencesEtudiant(int etudiantId) =>
+      presences.where((p) => p.etudiantId == etudiantId).toList();
+
+  List<PresenceModel> getAbsencesEtudiant(int etudiantId) =>
+      presences.where((p) => p.etudiantId == etudiantId && !p.estPresent).toList();
+
+  int getNombreAbsencesNonJustifiees(int etudiantId) => presences
+      .where((p) =>
+  p.etudiantId == etudiantId &&
+      !p.estPresent &&
+      p.statutJustification != 'VALIDE')
+      .length;
+
+  bool estEnSessionRattrapage(int etudiantId) =>
+      getNombreAbsencesNonJustifiees(etudiantId) >= 3;
+
+  List<Map<String, dynamic>> get filteredFiches {
+    if (selectedDepartement.value == 'Tous les départements')
+      return fichesPointage;
+    return fichesPointage
+        .where((f) => f['departement'] == selectedDepartement.value)
+        .toList();
   }
 
-  void signerDoyen(Uint8List signature) {
-    signatureDoyen.value = signature;
+  int get totalSeances => filteredFiches.length;
+  int get seancesValidees =>
+      filteredFiches.where((f) => f['statut'] == 'VALIDE').length;
+  int get seancesEnAttente => filteredFiches
+      .where((f) =>
+  f['statut'] == 'EN_ATTENTE' ||
+      f['statut'] == 'CONFIRME' ||
+      f['statut'] == 'EN_COURS')
+      .length;
+  int get seancesRejetees =>
+      filteredFiches.where((f) => f['statut'] == 'REJETE').length;
+
+  // ✅ CORRIGÉ : statistiquesMatieres calculé depuis presences chargées via API
+  List<Map<String, dynamic>> get statistiquesMatieres {
+    final Map<String, Map<String, dynamic>> stats = {};
+    for (var p in presences) {
+      final key = p.matiere ?? 'Inconnu';
+      if (!stats.containsKey(key)) {
+        stats[key] = {
+          'matiere': key,
+          'totalInscrits': 0,
+          'totalPresents': 0,
+        };
+      }
+      stats[key]!['totalInscrits']++;
+      if (p.estPresent) stats[key]!['totalPresents']++;
+    }
+    return stats.values.map((s) {
+      final total = s['totalInscrits'] as int;
+      final presents = s['totalPresents'] as int;
+      return {
+        'matiere': s['matiere'],
+        'totalSeances': (total / 30).ceil(),
+        'tauxPresence': total > 0 ? (presents / total * 100).toInt() : 0,
+      };
+    }).toList();
   }
 
   List<Map<String, dynamic>> getVacatairesData() {
-    final validees = fichesPointage
-        .where((f) => f['statut'] == 'VALIDE')
-        .toList();
-
+    final validees =
+    fichesPointage.where((f) => f['statut'] == 'VALIDE').toList();
     Map<String, Map<String, dynamic>> map = {};
     for (var f in validees) {
       final nomComplet = f['enseignantNom'] ?? 'Inconnu';
@@ -492,11 +617,9 @@ class SharedController extends GetxController {
           'salles': <String>{},
         };
       }
-      
       int dureeMin = f['duree'] as int? ?? 0;
       int heures = dureeMin ~/ 60;
-      if (heures == 0 && dureeMin > 0) heures = 1; 
-      
+      if (heures == 0 && dureeMin > 0) heures = 1;
       map[nomComplet]!['totalHeures'] += heures;
       (map[nomComplet]!['seances'] as List).add({
         'duree': heures,
@@ -510,42 +633,10 @@ class SharedController extends GetxController {
     return map.values.toList();
   }
 
-  // STATISTIQUES MATIERES
-  List<Map<String, dynamic>> get statistiquesMatieres {
-    final Map<String, Map<String, dynamic>> stats = {};
-    
-    for (var p in presences) {
-      final key = p.matiere ?? 'Inconnu';
-      if (!stats.containsKey(key)) {
-        stats[key] = {
-          'matiere': key,
-          'totalSeances': 0,
-          'totalPresents': 0,
-          'totalInscrits': 0,
-        };
-      }
-      stats[key]!['totalInscrits']++;
-      if (p.estPresent) stats[key]!['totalPresents']++;
-    }
-
-    return stats.values.map((s) {
-      final total = s['totalInscrits'] as int;
-      final presents = s['totalPresents'] as int;
-      return {
-        'matiere': s['matiere'],
-        'totalSeances': (total / 30).ceil(), // Approximation
-        'tauxPresence': total > 0 ? (presents / total * 100).toInt() : 0,
-      };
-    }).toList();
-  }
-
-  // STATS RAPIDES
-  List<Map<String, dynamic>> get filteredFiches {
-    if (selectedDepartement.value == 'Tous les départements') return fichesPointage;
-    return fichesPointage.where((f) => f['departement'] == selectedDepartement.value).toList();
-  }
-
-  int get totalSeances => filteredFiches.length;
-  int get seancesValidees => filteredFiches.where((f) => f['statut'] == 'VALIDE').length;
-  int get seancesEnAttente => filteredFiches.where((f) => f['statut'] == 'EN_ATTENTE' || f['statut'] == 'CONFIRME' || f['statut'] == 'EN_ATTENTE_SUPERVISEUR' || f['statut'] == 'EN_COURS').length;
+  // ===== SIGNATURES =====
+  void signerSuperviseur(Uint8List signature) =>
+      signatureSuperviseur.value = signature;
+  void signerChefDep(Uint8List signature) =>
+      signatureChefDep.value = signature;
+  void signerDoyen(Uint8List signature) => signatureDoyen.value = signature;
 }

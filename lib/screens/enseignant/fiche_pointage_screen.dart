@@ -1,7 +1,5 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:signature/signature.dart';
 import '../../controllers/auth_controller.dart';
 import '../../controllers/shared_controller.dart';
@@ -123,7 +121,11 @@ class _FichePointageScreenState extends State<FichePointageScreen> {
 
     // Mettre à jour le statut du cours dans le planning
     if (widget.cours['id'] != null) {
-      Get.find<PointageController>().pointerCours(widget.cours['id']);
+      Get.find<PointageController>().effectuerPointage(
+        seanceId: widget.cours['id'],
+        heureDebut: widget.cours['heureDebut'] ?? '08h00',
+        heureFin: widget.cours['heureFin'] ?? '10h00',
+      );
     }
 
     Get.back(); // Retourne à l'écran précédent (Dashboard)

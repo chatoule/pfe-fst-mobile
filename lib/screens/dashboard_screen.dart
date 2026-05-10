@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
 import '../controllers/shared_controller.dart';
-import '../controllers/pointage_controller.dart';
+import '../widgets/app_drawer.dart';
 
 class DashboardScreen extends StatelessWidget {
   final AuthController _authController = Get.find<AuthController>();
   final SharedController _sharedController = Get.find<SharedController>();
-  final PointageController _pointageController = Get.put(PointageController());
 
   DashboardScreen({super.key});
 
@@ -22,16 +21,22 @@ class DashboardScreen extends StatelessWidget {
         elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.logout),
-            onPressed: () => _authController.logout(),
+            icon: const Icon(Icons.notifications_outlined),
+            onPressed: () {},
           )
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      drawer: const AppDrawer(),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          await _sharedController.rafraichirDonnees();
+        },
+        child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
             Obx(() {
               final user = _authController.utilisateur.value;
               return Container(
@@ -44,7 +49,7 @@ class DashboardScreen extends StatelessWidget {
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF003D29).withOpacity(0.3),
+                      color: const Color(0xFF003D29).withValues(alpha: 0.3),
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     )
@@ -69,7 +74,7 @@ class DashboardScreen extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
@@ -160,9 +165,9 @@ class DashboardScreen extends StatelessWidget {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
-                          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10)
+                          BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10)
                         ],
-                        border: Border.all(color: const Color(0xFF00855A).withOpacity(0.2)),
+                        border: Border.all(color: const Color(0xFF00855A).withValues(alpha: 0.2)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -173,7 +178,7 @@ class DashboardScreen extends StatelessWidget {
                               Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF00855A).withOpacity(0.1),
+                                  color: const Color(0xFF00855A).withValues(alpha: 0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
                                 child: Text(c['heure'], style: const TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF00855A), fontSize: 12)),
@@ -250,7 +255,7 @@ class DashboardScreen extends StatelessWidget {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF00855A).withOpacity(0.1),
+                          color: const Color(0xFF00855A).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.book, color: Color(0xFF00855A)),
@@ -266,6 +271,7 @@ class DashboardScreen extends StatelessWidget {
           ],
         ),
       ),
+    ),
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           // Naviguer vers le pointage avec un objet de cours structuré
@@ -293,7 +299,7 @@ class DashboardScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           )
@@ -328,9 +334,9 @@ class DashboardScreen extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         statut,

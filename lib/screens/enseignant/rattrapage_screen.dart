@@ -3,7 +3,9 @@ import 'package:get/get.dart';
 import '../../controllers/shared_controller.dart';
 
 class RattrapagesScreen extends StatelessWidget {
-  final controller = SharedController.to;
+  const RattrapagesScreen({super.key});
+
+  static final controller = SharedController.to;
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +103,7 @@ class RattrapagesScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: Offset(0, 4),
           ),
@@ -117,7 +119,7 @@ class RattrapagesScreen extends StatelessWidget {
                   width: 48,
                   height: 48,
                   decoration: BoxDecoration(
-                    color: couleur.withOpacity(0.1),
+                    color: couleur.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(icon, color: couleur, size: 24),
@@ -168,9 +170,9 @@ class RattrapagesScreen extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
-                    color: couleur.withOpacity(0.1),
+                    color: couleur.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: couleur.withOpacity(0.3)),
+                    border: Border.all(color: couleur.withValues(alpha: 0.3)),
                   ),
                   child: Text(r['statut']!,
                       style: TextStyle(
@@ -218,7 +220,7 @@ class RattrapagesScreen extends StatelessWidget {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(

@@ -15,19 +15,17 @@ class UserModel {
     required this.token,
   });
 
-  // Convertir le JSON reçu de l'API en objet Dart
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'],
-      nom: json['nom'],
-      prenom: json['prenom'],
-      email: json['email'],
-      role: json['role'],
-      token: json['token'],
+      id: json['id'] ?? 0,
+      nom: json['nom'] ?? '',
+      prenom: json['prenom'] ?? '',
+      email: json['email'] ?? '',
+      role: json['role'] ?? '',
+      token: json['token'] ?? '',
     );
   }
 
-  // Convertir l'objet Dart en JSON pour envoyer à l'API
   Map<String, dynamic> toJson() {
     return {
       'id': id,

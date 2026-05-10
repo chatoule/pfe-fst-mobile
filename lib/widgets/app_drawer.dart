@@ -3,7 +3,9 @@ import 'package:get/get.dart';
 import '../controllers/auth_controller.dart';
 
 class AppDrawer extends StatelessWidget {
-  final AuthController _authController = Get.find<AuthController>();
+  const AppDrawer({super.key});
+
+  static AuthController get _authController => Get.find<AuthController>();
 
   @override
   Widget build(BuildContext context) {
@@ -34,7 +36,7 @@ class AppDrawer extends StatelessWidget {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                     border: Border.all(color: Colors.white, width: 2),
                   ),
@@ -64,7 +66,7 @@ class AppDrawer extends StatelessWidget {
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -126,12 +128,12 @@ class AppDrawer extends StatelessWidget {
     switch (role) {
       case 'ENSEIGNANT':
         return [
-          _buildMenuItem(Icons.check_circle, 'Mes Cours', '/pointage', context),
-          _buildMenuItem(Icons.people, 'Presences', '/pointage', context),
-          _buildMenuItem(Icons.replay, 'Rattrapages', '/pointage', context),
-          _buildMenuItem(Icons.fast_forward, 'Anticipations', '/pointage', context),
-          _buildMenuItem(Icons.folder, 'Supports', '/pointage', context),
-          _buildMenuItem(Icons.history, 'Historique', '/pointage', context),
+          _buildMenuItem(Icons.check_circle, 'Mes Cours', '/pointage', context, arguments: {'index': 0}),
+          _buildMenuItem(Icons.people, 'Presences', '/pointage', context, arguments: {'index': 1}),
+          _buildMenuItem(Icons.replay, 'Rattrapages', '/pointage', context, arguments: {'index': 2}),
+          _buildMenuItem(Icons.fast_forward, 'Anticipations', '/pointage', context, arguments: {'index': 3}),
+          _buildMenuItem(Icons.folder, 'Supports', '/pointage', context, arguments: {'index': 4}),
+          _buildMenuItem(Icons.history, 'Historique', '/pointage', context, arguments: {'index': 5}),
         ];
       case 'ETUDIANT':
         return [
@@ -173,15 +175,23 @@ class AppDrawer extends StatelessWidget {
   }
 
   Widget _buildMenuItem(
-      IconData icon, String titre, String route, BuildContext context) {
+      IconData icon, String titre, String route, BuildContext context, {dynamic arguments}) {
     final currentRoute = Get.currentRoute;
-    final isActive = currentRoute == route;
+    final currentArgs = Get.arguments;
+    
+    // Vérification de l'activation plus précise pour les onglets
+    bool isActive = currentRoute == route;
+    if (isActive && arguments != null && currentArgs != null) {
+      if (arguments is Map && currentArgs is Map) {
+        isActive = arguments['index'] == currentArgs['index'];
+      }
+    }
 
     return Container(
       margin: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
         color: isActive
-            ? Color(0xFF00855A).withOpacity(0.1)
+            ? Color(0xFF00855A).withValues(alpha: 0.1)
             : Colors.transparent,
         borderRadius: BorderRadius.circular(10),
       ),
@@ -205,7 +215,7 @@ class AppDrawer extends StatelessWidget {
         ),
         onTap: () {
           Navigator.pop(context);
-          Get.offAllNamed(route);
+          Get.offAllNamed(route, arguments: arguments);
         },
       ),
     );

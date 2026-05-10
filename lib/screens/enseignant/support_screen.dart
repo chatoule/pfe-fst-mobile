@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart' as file_picker;
 import '../../controllers/shared_controller.dart';
+import '../common/pdf_viewer_screen.dart';
 
 class SupportsScreen extends StatefulWidget {
   final bool isReadOnly;
@@ -9,7 +10,7 @@ class SupportsScreen extends StatefulWidget {
   const SupportsScreen({super.key, this.isReadOnly = false});
 
   @override
-  _SupportsScreenState createState() => _SupportsScreenState();
+  State<SupportsScreen> createState() => _SupportsScreenState();
 }
 
 class _SupportsScreenState extends State<SupportsScreen> {
@@ -87,7 +88,7 @@ class _SupportsScreenState extends State<SupportsScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -101,7 +102,7 @@ class _SupportsScreenState extends State<SupportsScreen> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: (s['couleur'] as Color).withOpacity(0.1),
+                color: (s['couleur'] as Color).withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(s['icon'] as IconData,
@@ -109,31 +110,44 @@ class _SupportsScreenState extends State<SupportsScreen> {
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(s['titre'],
-                      style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                          color: Color(0xFF003D29))),
-                  const SizedBox(height: 4),
-                  Text(s['matiere'],
-                      style: const TextStyle(
-                          color: Color(0xFF00855A),
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500)),
-                  const SizedBox(height: 2),
-                  Row(children: [
-                    const Icon(Icons.calendar_today, size: 11, color: Colors.grey),
-                    const SizedBox(width: 3),
-                    Text(s['date'],
-                        style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                    const SizedBox(width: 8),
-                    Text('• ${s['taille']}',
-                        style: const TextStyle(color: Colors.grey, fontSize: 11)),
-                  ]),
-                ],
+              child: GestureDetector(
+                onTap: () {
+                  if (s['type'] == 'PDF' && s['path'] != null) {
+                    Get.to(() => PdfViewerScreen(
+                      titre: s['titre'],
+                      filePath: s['path'],
+                    ));
+                  } else if (s['type'] == 'PDF') {
+                    Get.snackbar('Information', 'Ce PDF est un exemple statique sans fichier réel.',
+                        backgroundColor: Colors.blue, colorText: Colors.white);
+                  }
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(s['titre'],
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: Color(0xFF003D29))),
+                    const SizedBox(height: 4),
+                    Text(s['matiere'],
+                        style: const TextStyle(
+                            color: Color(0xFF00855A),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500)),
+                    const SizedBox(height: 2),
+                    Row(children: [
+                      const Icon(Icons.calendar_today, size: 11, color: Colors.grey),
+                      const SizedBox(width: 3),
+                      Text(s['date'],
+                          style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                      const SizedBox(width: 8),
+                      Text('• ${s['taille']}',
+                          style: const TextStyle(color: Colors.grey, fontSize: 11)),
+                    ]),
+                  ],
+                ),
               ),
             ),
             IconButton(
@@ -152,6 +166,8 @@ class _SupportsScreenState extends State<SupportsScreen> {
     String typeSelectionne = 'PDF';
     String? fileName;
     String? fileSize;
+
+    String? filePath;
 
     showDialog(
       context: context,
@@ -207,6 +223,7 @@ class _SupportsScreenState extends State<SupportsScreen> {
                         if (result != null) {
                           setDialogState(() {
                             fileName = result.files.single.name;
+                            filePath = result.files.single.path;
                             double sizeMb = result.files.single.size / (1024 * 1024);
                             fileSize = '${sizeMb.toStringAsFixed(1)} MB';
                             
@@ -214,9 +231,13 @@ class _SupportsScreenState extends State<SupportsScreen> {
                               titreController.text = fileName!.split('.').first;
                             }
                             String ext = fileName!.split('.').last.toUpperCase();
-                            if (['DOC', 'DOCX'].contains(ext)) typeSelectionne = 'WORD';
-                            else if (['PPT', 'PPTX'].contains(ext)) typeSelectionne = 'PPT';
-                            else if (ext == 'PDF') typeSelectionne = 'PDF';
+                            if (['DOC', 'DOCX'].contains(ext)) {
+                              typeSelectionne = 'WORD';
+                            } else if (['PPT', 'PPTX'].contains(ext)) {
+                              typeSelectionne = 'PPT';
+                            } else if (ext == 'PDF') {
+                              typeSelectionne = 'PDF';
+                            }
                           });
                         }
                       } catch (e) {
@@ -233,7 +254,7 @@ class _SupportsScreenState extends State<SupportsScreen> {
                 ),
                 const SizedBox(height: 15),
                 DropdownButtonFormField<String>(
-                  value: typeSelectionne,
+                  initialValue: typeSelectionne,
                   decoration: const InputDecoration(labelText: 'Type de document'),
                   items: ['PDF', 'WORD', 'PPT'].map((String value) {
                     return DropdownMenuItem<String>(
@@ -259,7 +280,8 @@ class _SupportsScreenState extends State<SupportsScreen> {
                     titreController.text,
                     matiereController.text.isEmpty ? 'Général' : matiereController.text,
                     typeSelectionne,
-                    fileSize ?? '0.0 MB'
+                    fileSize ?? '0.0 MB',
+                    path: filePath
                   );
                   Navigator.pop(context);
                   Get.snackbar(
@@ -287,7 +309,7 @@ class _SupportsScreenState extends State<SupportsScreen> {
       child: Container(
         padding: EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.15),
+          color: Colors.white.withValues(alpha: 0.15),
           borderRadius: BorderRadius.circular(10),
         ),
         child: Column(

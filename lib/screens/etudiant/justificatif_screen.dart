@@ -1,3 +1,5 @@
+// lib/screens/etudiant/justificatif_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:file_picker/file_picker.dart';
@@ -7,10 +9,10 @@ import '../../controllers/shared_controller.dart';
 
 class JustificatifScreen extends StatefulWidget {
   final int presenceId;
-  JustificatifScreen({required this.presenceId});
+  const JustificatifScreen({super.key, required this.presenceId});
 
   @override
-  _JustificatifScreenState createState() => _JustificatifScreenState();
+  State<JustificatifScreen> createState() => _JustificatifScreenState();
 }
 
 class _JustificatifScreenState extends State<JustificatifScreen> {
@@ -18,20 +20,25 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
   String? _typeSelectionne;
   bool _typeErreur = false;
   bool _motifErreur = false;
+  bool _isLoading = false; // ✅ CORRIGÉ : état de chargement réel
 
-  // Fichiers joints
-  List<Map<String, dynamic>> _fichierJoints = [];
+  final List<Map<String, dynamic>> _fichierJoints = [];
 
   final List<String> _types = [
-    'Certificat medical',
+    'Certificat médical',
     'Convocation officielle',
-    'Deces dans la famille',
+    'Décès dans la famille',
     'Autre',
   ];
 
   final ImagePicker _imagePicker = ImagePicker();
 
-  // ===== CHOISIR UN PDF =====
+  @override
+  void dispose() {
+    _motifController.dispose();
+    super.dispose();
+  }
+
   Future<void> _choisirPDF() async {
     try {
       FilePickerResult? result = await FilePicker.platform.pickFiles(
@@ -39,7 +46,6 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
         allowedExtensions: ['pdf', 'doc', 'docx'],
         allowMultiple: false,
       );
-
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
         setState(() {
@@ -52,9 +58,9 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
             'couleur': Colors.red,
           });
         });
-        Get.snackbar('Succes', '${file.name} ajoute',
+        Get.snackbar('Succès', '${file.name} ajouté',
             snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Color(0xFF00855A),
+            backgroundColor: const Color(0xFF00855A),
             colorText: Colors.white);
       }
     } catch (e) {
@@ -65,14 +71,12 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
     }
   }
 
-  // ===== CHOISIR UNE IMAGE DEPUIS LA GALERIE =====
   Future<void> _choisirImage() async {
     try {
       final XFile? image = await _imagePicker.pickImage(
         source: ImageSource.gallery,
         imageQuality: 70,
       );
-
       if (image != null) {
         final file = File(image.path);
         final taille = await file.length();
@@ -86,9 +90,9 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
             'couleur': Colors.blue,
           });
         });
-        Get.snackbar('Succes', '${image.name} ajoute',
+        Get.snackbar('Succès', '${image.name} ajouté',
             snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Color(0xFF00855A),
+            backgroundColor: const Color(0xFF00855A),
             colorText: Colors.white);
       }
     } catch (e) {
@@ -99,14 +103,12 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
     }
   }
 
-  // ===== PRENDRE UNE PHOTO =====
   Future<void> _prendrePhoto() async {
     try {
       final XFile? photo = await _imagePicker.pickImage(
         source: ImageSource.camera,
         imageQuality: 70,
       );
-
       if (photo != null) {
         final file = File(photo.path);
         final taille = await file.length();
@@ -120,9 +122,9 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
             'couleur': Colors.green,
           });
         });
-        Get.snackbar('Succes', 'Photo ajoutee',
+        Get.snackbar('Succès', 'Photo ajoutée',
             snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Color(0xFF00855A),
+            backgroundColor: const Color(0xFF00855A),
             colorText: Colors.white);
       }
     } catch (e) {
@@ -135,7 +137,9 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
 
   String _formaterTaille(int octets) {
     if (octets < 1024) return '$octets B';
-    if (octets < 1024 * 1024) return '${(octets / 1024).toStringAsFixed(1)} KB';
+    if (octets < 1024 * 1024) {
+      return '${(octets / 1024).toStringAsFixed(1)} KB';
+    }
     return '${(octets / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
@@ -146,11 +150,11 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
   void _showOptionsJoindre() {
     showModalBottomSheet(
       context: context,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (context) => Container(
-        padding: EdgeInsets.all(24),
+        padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -162,13 +166,13 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
-            SizedBox(height: 20),
-            Text('Joindre un fichier',
+            const SizedBox(height: 20),
+            const Text('Joindre un fichier',
                 style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Color(0xFF003D29))),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -192,8 +196,8 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                 ),
                 _buildOptionJoindre(
                   icon: Icons.camera_alt,
-                  label: 'Camera',
-                  couleur: Color(0xFF00855A),
+                  label: 'Caméra',
+                  couleur: const Color(0xFF00855A),
                   onTap: () {
                     Navigator.pop(context);
                     _prendrePhoto();
@@ -201,7 +205,7 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                 ),
               ],
             ),
-            SizedBox(height: 20),
+            const SizedBox(height: 20),
           ],
         ),
       ),
@@ -222,15 +226,15 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: couleur.withOpacity(0.1),
+              color: couleur.withValues(alpha: 0.1),
               shape: BoxShape.circle,
-              border: Border.all(color: couleur.withOpacity(0.3)),
+              border: Border.all(color: couleur.withValues(alpha: 0.3)),
             ),
             child: Icon(icon, color: couleur, size: 28),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(label,
-              style: TextStyle(
+              style: const TextStyle(
                   color: Color(0xFF003D29),
                   fontSize: 13,
                   fontWeight: FontWeight.w500)),
@@ -239,10 +243,11 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
     );
   }
 
-  void _soumettre() {
-    bool hasType = _typeSelectionne != null;
-    bool hasMotif = _motifController.text.trim().isNotEmpty;
-    bool hasFile = _fichierJoints.isNotEmpty;
+  // ✅ CORRIGÉ : suppression du Future.delayed — appel direct et synchrone
+  Future<void> _soumettre() async {
+    final hasType = _typeSelectionne != null;
+    final hasMotif = _motifController.text.trim().isNotEmpty;
+    final hasFile = _fichierJoints.isNotEmpty;
 
     if (!hasType && !hasMotif && !hasFile) {
       setState(() {
@@ -255,7 +260,7 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.orange[800],
         colorText: Colors.white,
-        icon: Icon(Icons.info_outline, color: Colors.white),
+        icon: const Icon(Icons.info_outline, color: Colors.white),
       );
       return;
     }
@@ -263,33 +268,17 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
     setState(() {
       _typeErreur = false;
       _motifErreur = false;
+      _isLoading = true; // ✅ Afficher le chargement
     });
 
-    // Afficher le dialogue de chargement
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(color: Color(0xFF00855A)),
-            SizedBox(height: 16),
-            Text('Envoi en cours...', 
-                 style: TextStyle(fontWeight: FontWeight.w500)),
-          ],
-        ),
-      ),
-    );
+    try {
+      final url = _fichierJoints.isNotEmpty
+          ? _fichierJoints.first['chemin'] as String
+          : 'justificatif_${widget.presenceId}_${DateTime.now().millisecondsSinceEpoch}';
 
-    // Simulation de l'envoi
-    Future.delayed(Duration(seconds: 2), () {
-      Navigator.of(context).pop(); // Ferme le dialogue de chargement
-      
-      String url = _fichierJoints.isNotEmpty 
-          ? _fichierJoints.first['chemin'] 
-          : 'justificatif_${widget.presenceId}.pdf';
-
+      // ⚠️ NOTE : soumettreJustificatif est pour l'instant local
+      // Quand l'endpoint POST /justificatifs sera disponible côté backend,
+      // il faudra l'appeler ici via un JustificatifService
       SharedController.to.soumettreJustificatif(
         widget.presenceId,
         _typeSelectionne ?? '',
@@ -297,33 +286,35 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
         url,
       );
 
-      // Notification de succès
       Get.snackbar(
         'Succès',
         'Votre justificatif a été soumis avec succès.',
         snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Color(0xFF00855A),
+        backgroundColor: const Color(0xFF00855A),
         colorText: Colors.white,
-        icon: Icon(Icons.check_circle, color: Colors.white),
-        margin: EdgeInsets.all(15),
-        duration: Duration(seconds: 3),
+        icon: const Icon(Icons.check_circle, color: Colors.white),
+        margin: const EdgeInsets.all(15),
+        duration: const Duration(seconds: 3),
       );
 
-      // Retour à l'écran précédent après un court délai
-      Future.delayed(Duration(milliseconds: 1500), () {
-        Get.back(); 
-      });
-    });
+      // ✅ Retour immédiat sans délai artificiel
+      Get.back();
+    } catch (e) {
+      Get.snackbar('Erreur', 'Une erreur est survenue : $e',
+          backgroundColor: Colors.red, colorText: Colors.white);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Color(0xFFF5F7FA),
+      backgroundColor: const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: Text('Soumettre un justificatif',
+        title: const Text('Soumettre un justificatif',
             style: TextStyle(fontWeight: FontWeight.bold)),
-        backgroundColor: Color(0xFF00855A),
+        backgroundColor: const Color(0xFF00855A),
         foregroundColor: Colors.white,
         elevation: 0,
       ),
@@ -333,8 +324,8 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
             // Header
             Container(
               width: double.infinity,
-              padding: EdgeInsets.all(20),
-              decoration: BoxDecoration(
+              padding: const EdgeInsets.all(20),
+              decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   colors: [Color(0xFF00855A), Color(0xFF003D29)],
                 ),
@@ -345,16 +336,18 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Icon(Icons.upload_file, color: Colors.white, size: 22),
+                    child: const Icon(Icons.upload_file,
+                        color: Colors.white, size: 22),
                   ),
-                  SizedBox(width: 12),
-                  Expanded(
+                  const SizedBox(width: 12),
+                  const Expanded(
                     child: Text(
-                      'Soumettez un justificatif pour votre absence. Il sera examine par le chef de departement.',
-                      style: TextStyle(color: Colors.white, fontSize: 13),
+                      'Soumettez un justificatif pour votre absence. Il sera examiné par le Chef de Département.',
+                      style:
+                      TextStyle(color: Colors.white, fontSize: 13),
                     ),
                   ),
                 ],
@@ -362,11 +355,11 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
             ),
 
             Padding(
-              padding: EdgeInsets.all(16),
+              padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ===== TYPE =====
+                  // TYPE
                   _buildSection(
                     icon: Icons.category_outlined,
                     titre: 'Type de justificatif',
@@ -379,19 +372,21 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                             _typeErreur = false;
                           }),
                           child: Container(
-                            margin: EdgeInsets.only(bottom: 8),
-                            padding: EdgeInsets.symmetric(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 12),
                             decoration: BoxDecoration(
                               color: isSelected
-                                  ? Color(0xFF00855A).withOpacity(0.08)
-                                  : Color(0xFFF5F7FA),
+                                  ? const Color(0xFF00855A)
+                                  .withValues(alpha: 0.08)
+                                  : const Color(0xFFF5F7FA),
                               borderRadius: BorderRadius.circular(10),
                               border: Border.all(
                                 color: isSelected
-                                    ? Color(0xFF00855A)
+                                    ? const Color(0xFF00855A)
                                     : _typeErreur
-                                    ? Colors.red.withOpacity(0.5)
+                                    ? Colors.red
+                                    .withValues(alpha: 0.5)
                                     : Colors.grey[200]!,
                                 width: isSelected ? 1.5 : 1,
                               ),
@@ -405,25 +400,26 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                                     shape: BoxShape.circle,
                                     border: Border.all(
                                       color: isSelected
-                                          ? Color(0xFF00855A)
+                                          ? const Color(0xFF00855A)
                                           : Colors.grey[400]!,
                                       width: 2,
                                     ),
                                     color: isSelected
-                                        ? Color(0xFF00855A)
+                                        ? const Color(0xFF00855A)
                                         : Colors.transparent,
                                   ),
                                   child: isSelected
-                                      ? Icon(Icons.check,
-                                      color: Colors.white, size: 12)
+                                      ? const Icon(Icons.check,
+                                      color: Colors.white,
+                                      size: 12)
                                       : null,
                                 ),
-                                SizedBox(width: 12),
+                                const SizedBox(width: 12),
                                 Text(type,
                                     style: TextStyle(
                                         color: isSelected
-                                            ? Color(0xFF00855A)
-                                            : Color(0xFF003D29),
+                                            ? const Color(0xFF00855A)
+                                            : const Color(0xFF003D29),
                                         fontWeight: isSelected
                                             ? FontWeight.bold
                                             : FontWeight.normal,
@@ -438,20 +434,22 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
 
                   if (_typeErreur)
                     Padding(
-                      padding: EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.only(bottom: 8),
                       child: Row(
-                        children: [
-                          Icon(Icons.error_outline, color: Colors.red, size: 14),
+                        children: const [
+                          Icon(Icons.error_outline,
+                              color: Colors.red, size: 14),
                           SizedBox(width: 4),
-                          Text('Veuillez selectionner un type',
-                              style: TextStyle(color: Colors.red, fontSize: 12)),
+                          Text('Veuillez sélectionner un type',
+                              style: TextStyle(
+                                  color: Colors.red, fontSize: 12)),
                         ],
                       ),
                     ),
 
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                  // ===== MOTIF =====
+                  // MOTIF
                   _buildSection(
                     icon: Icons.edit_note_outlined,
                     titre: 'Motif de l\'absence',
@@ -464,19 +462,20 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                         }
                       },
                       decoration: InputDecoration(
-                        hintText: 'Expliquez en detail la raison...',
-                        hintStyle:
-                        TextStyle(color: Colors.grey[400], fontSize: 13),
+                        hintText:
+                        'Expliquez en détail la raison...',
+                        hintStyle: TextStyle(
+                            color: Colors.grey[400], fontSize: 13),
                         filled: true,
-                        fillColor: Color(0xFFF5FAF7),
+                        fillColor: const Color(0xFFF5FAF7),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide.none,
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
-                          borderSide:
-                          BorderSide(color: Color(0xFF00855A), width: 2),
+                          borderSide: const BorderSide(
+                              color: Color(0xFF00855A), width: 2),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
@@ -486,121 +485,135 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                                 : Colors.grey[200]!,
                           ),
                         ),
-                        errorText:
-                        _motifErreur ? 'Ce champ est obligatoire' : null,
+                        errorText: _motifErreur
+                            ? 'Ce champ est obligatoire'
+                            : null,
                       ),
                     ),
                   ),
 
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
 
-                  // ===== FICHIERS JOINTS =====
+                  // FICHIERS JOINTS
                   _buildSection(
                     icon: Icons.attach_file,
                     titre: 'Fichiers joints (optionnel)',
                     child: Column(
                       children: [
-                        // Liste des fichiers ajoutés
                         if (_fichierJoints.isNotEmpty) ...[
-                          ..._fichierJoints.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final fichier = entry.value;
-                            return Container(
-                              margin: EdgeInsets.only(bottom: 8),
-                              padding: EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: (fichier['couleur'] as Color)
-                                    .withOpacity(0.05),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(
+                          ..._fichierJoints.asMap().entries.map(
+                                (entry) {
+                              final index = entry.key;
+                              final fichier = entry.value;
+                              return Container(
+                                margin:
+                                const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
                                   color: (fichier['couleur'] as Color)
-                                      .withOpacity(0.2),
+                                      .withValues(alpha: 0.05),
+                                  borderRadius:
+                                  BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color:
+                                    (fichier['couleur'] as Color)
+                                        .withValues(alpha: 0.2),
+                                  ),
                                 ),
-                              ),
-                              child: Row(
-                                children: [
-                                  Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      color: (fichier['couleur'] as Color)
-                                          .withOpacity(0.1),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Icon(
-                                      fichier['icon'] as IconData,
-                                      color: fichier['couleur'] as Color,
-                                      size: 20,
-                                    ),
-                                  ),
-                                  SizedBox(width: 10),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          fichier['nom'],
-                                          style: TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 13,
-                                              color: Color(0xFF003D29)),
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        Text(
-                                          '${fichier['type']} • ${fichier['taille']}',
-                                          style: TextStyle(
-                                              color: Colors.grey, fontSize: 11),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Aperçu image
-                                  if (fichier['type'] == 'IMAGE' ||
-                                      fichier['type'] == 'PHOTO')
+                                child: Row(
+                                  children: [
                                     Container(
                                       width: 40,
                                       height: 40,
-                                      margin: EdgeInsets.only(right: 8),
                                       decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
-                                        image: DecorationImage(
-                                          image: FileImage(
-                                              File(fichier['chemin'])),
-                                          fit: BoxFit.cover,
-                                        ),
+                                        color:
+                                        (fichier['couleur'] as Color)
+                                            .withValues(alpha: 0.1),
+                                        borderRadius:
+                                        BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        fichier['icon'] as IconData,
+                                        color: fichier['couleur']
+                                        as Color,
+                                        size: 20,
                                       ),
                                     ),
-                                  IconButton(
-                                    icon: Icon(Icons.close,
-                                        color: Colors.red, size: 18),
-                                    onPressed: () => _supprimerFichier(index),
-                                    padding: EdgeInsets.zero,
-                                    constraints: BoxConstraints(),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }).toList(),
-                          SizedBox(height: 8),
+                                    const SizedBox(width: 10),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            fichier['nom'],
+                                            style: const TextStyle(
+                                                fontWeight:
+                                                FontWeight.bold,
+                                                fontSize: 13,
+                                                color:
+                                                Color(0xFF003D29)),
+                                            maxLines: 1,
+                                            overflow:
+                                            TextOverflow.ellipsis,
+                                          ),
+                                          Text(
+                                            '${fichier['type']} • ${fichier['taille']}',
+                                            style: const TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 11),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    if (fichier['type'] == 'IMAGE' ||
+                                        fichier['type'] == 'PHOTO')
+                                      Container(
+                                        width: 40,
+                                        height: 40,
+                                        margin: const EdgeInsets.only(
+                                            right: 8),
+                                        decoration: BoxDecoration(
+                                          borderRadius:
+                                          BorderRadius.circular(8),
+                                          image: DecorationImage(
+                                            image: FileImage(File(
+                                                fichier['chemin'])),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close,
+                                          color: Colors.red, size: 18),
+                                      onPressed: () =>
+                                          _supprimerFichier(index),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ).toList(),
+                          const SizedBox(height: 8),
                         ],
 
-                        // Bouton joindre
                         GestureDetector(
                           onTap: _showOptionsJoindre,
                           child: Container(
                             width: double.infinity,
-                            padding: EdgeInsets.symmetric(vertical: 14),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 14),
                             decoration: BoxDecoration(
-                              color: Color(0xFFF5FAF7),
+                              color: const Color(0xFFF5FAF7),
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: Color(0xFF00855A).withOpacity(0.3),
-                                style: BorderStyle.solid,
+                                color: const Color(0xFF00855A)
+                                    .withValues(alpha: 0.3),
                               ),
                             ),
-                            child: Column(
+                            child: const Column(
                               children: [
                                 Icon(Icons.add_circle_outline,
                                     color: Color(0xFF00855A), size: 28),
@@ -613,7 +626,8 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                                 SizedBox(height: 2),
                                 Text('PDF, DOC, Image ou Photo',
                                     style: TextStyle(
-                                        color: Colors.grey, fontSize: 11)),
+                                        color: Colors.grey,
+                                        fontSize: 11)),
                               ],
                             ),
                           ),
@@ -622,33 +636,47 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                     ),
                   ),
 
-                  SizedBox(height: 24),
+                  const SizedBox(height: 24),
 
                   // Bouton soumettre
                   Container(
                     width: double.infinity,
                     height: 56,
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
+                      gradient: const LinearGradient(
                         colors: [Color(0xFF00A86B), Color(0xFF00855A)],
                       ),
                       borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
-                          color: Color(0xFF00855A).withOpacity(0.4),
+                          color: const Color(0xFF00855A)
+                              .withValues(alpha: 0.4),
                           blurRadius: 15,
-                          offset: Offset(0, 6),
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
                     child: ElevatedButton.icon(
-                      onPressed: _soumettre,
-                      icon: Icon(Icons.send_rounded, color: Colors.white),
-                      label: Text('Soumettre le justificatif',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold)),
+                      // ✅ CORRIGÉ : désactivé pendant le chargement
+                      onPressed: _isLoading ? null : _soumettre,
+                      icon: _isLoading
+                          ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                          : const Icon(Icons.send_rounded,
+                          color: Colors.white),
+                      label: Text(
+                        _isLoading ? 'Envoi...' : 'Soumettre le justificatif',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold),
+                      ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.transparent,
                         shadowColor: Colors.transparent,
@@ -658,7 +686,7 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
                     ),
                   ),
 
-                  SizedBox(height: 32),
+                  const SizedBox(height: 32),
                 ],
               ),
             ),
@@ -675,35 +703,36 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
   }) {
     return Container(
       width: double.infinity,
-      margin: EdgeInsets.only(bottom: 4),
+      margin: const EdgeInsets.only(bottom: 4),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.06),
+            color: Colors.black.withValues(alpha: 0.06),
             blurRadius: 10,
-            offset: Offset(0, 4),
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         children: [
           Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            padding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: Color(0xFF00855A).withOpacity(0.08),
-              borderRadius: BorderRadius.only(
+              color: const Color(0xFF00855A).withValues(alpha: 0.08),
+              borderRadius: const BorderRadius.only(
                 topLeft: Radius.circular(16),
                 topRight: Radius.circular(16),
               ),
             ),
             child: Row(
               children: [
-                Icon(icon, color: Color(0xFF00855A), size: 18),
-                SizedBox(width: 8),
+                Icon(icon, color: const Color(0xFF00855A), size: 18),
+                const SizedBox(width: 8),
                 Text(titre,
-                    style: TextStyle(
+                    style: const TextStyle(
                         color: Color(0xFF00855A),
                         fontWeight: FontWeight.bold,
                         fontSize: 14)),
@@ -711,7 +740,7 @@ class _JustificatifScreenState extends State<JustificatifScreen> {
             ),
           ),
           Padding(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             child: child,
           ),
         ],

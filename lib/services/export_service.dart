@@ -211,13 +211,13 @@ class ExportService {
             pw.Header(level: 0, child: pw.Center(child: pw.Text('ÉTAT DE VACATION GÉNÉRAL', style: headerStyle))),
             pw.SizedBox(height: 20),
             pw.TableHelper.fromTextArray(
-              headers: ['Enseignant', 'Matière', 'Volume Horaire', 'Taux/H', 'Total (GNF)'],
+              headers: ['Enseignant', 'Matière', 'Volume Horaire', 'Taux/H', 'Total (XOF)'],
               data: vacations.map((v) => [
                 v['enseignantNom'],
                 v['matiere'],
                 '${v['totalHeures']} h',
-                '${v['tauxHoraire']} GNF',
-                '${(v['totalHeures'] as int) * (v['tauxHoraire'] as int)} GNF',
+                '${v['tauxHoraire']} XOF',
+                '${(v['totalHeures'] as int) * (v['tauxHoraire'] as int)} XOF',
               ]).toList(),
               headerStyle: boldStyle.copyWith(color: PdfColors.white),
               cellStyle: regularStyle,
@@ -263,7 +263,7 @@ class ExportService {
       horizontalAlign: HorizontalAlign.Center,
     );
 
-    var headers = ['Enseignant', 'Matière', 'Heures', 'Taux/H', 'Total (GNF)'];
+    var headers = ['Enseignant', 'Matière', 'Heures', 'Taux/H', 'Total (XOF)'];
     for (var i = 0; i < headers.length; i++) {
       var cell = sheetObject.cell(CellIndex.indexByColumnRow(columnIndex: i, rowIndex: 0));
       cell.value = TextCellValue(headers[i]);

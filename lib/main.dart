@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'screens/login_screen.dart';
-import 'screens/presence_screen.dart';
 import 'screens/pointage_screen.dart';
 import 'screens/dashboard_screen.dart';
 import 'screens/etudiant/espace_etudiant_screen.dart';
@@ -10,6 +9,7 @@ import 'screens/chef_departement/chef_departement_screen.dart';
 import 'screens/superviseur/superviseur_screen.dart';
 import 'screens/secretaire/secretaire_screen.dart';
 import 'screens/enseignant/fiche_pointage_screen.dart';
+import 'screens/enseignant/presence_screen.dart';
 import 'theme/app_theme.dart';
 import 'screens/splash_screen.dart';
 import 'controllers/auth_controller.dart';
@@ -18,8 +18,6 @@ import 'screens/superviseur/confirmation_seances_screen.dart';
 import 'screens/chef_departement/validation_seances_screen.dart';
 import 'controllers/shared_controller.dart';
 import 'screens/chef_departement/etat_vacation_screen.dart';
-import 'screens/finalisation_compte_screen.dart';
-
 import 'controllers/presence_controller.dart';
 
 void main() async {
@@ -32,6 +30,8 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
@@ -53,7 +53,7 @@ class MyApp extends StatelessWidget {
         GetPage(name: '/confirmation-seances', page: () => ConfirmationSeancesScreen()),
         GetPage(name: '/validation-seances', page: () => ValidationSeancesScreen()),
         GetPage(name: '/etat-vacation', page: () => EtatVacationScreen()),
-        GetPage(name: '/finalisation-compte', page: () => const FinalisationCompteScreen()),
+        GetPage(name: '/presence-enseignant', page: () => const PresencesScreen()),
       ],
     );
   }
